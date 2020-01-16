@@ -35,6 +35,7 @@ struct Handle_lt
 struct SocketDetails_lt
 {
   Request* r;
+  const std::function<void()> completed;
 
   boost::asio::ip::tcp::resolver resolver;
   boost::asio::ip::tcp::socket socket;
@@ -48,7 +49,8 @@ struct SocketDetails_lt
   std::shared_ptr<Handle_lt> handle;
 
   //################################################################################################
-  SocketDetails_lt(boost::asio::io_context& ioContext):
+  SocketDetails_lt(boost::asio::io_context& ioContext, const std::function<void()>& completed_):
+    completed(completed_),
     resolver(ioContext),
     socket(ioContext),
     sslCtx(boost::asio::ssl::context::sslv23),
@@ -74,6 +76,8 @@ struct SocketDetails_lt
 
     deadlineTimer.cancel();
     delete r;
+
+    completed();
   }
 
   //################################################################################################
@@ -159,7 +163,12 @@ struct Client::Private
 
     inFlight++;
 
-    auto s = std::make_shared<SocketDetails_lt>(ioContext);
+    auto s = std::make_shared<SocketDetails_lt>(ioContext, [&]
+    {
+      TP_MUTEX_LOCKER(requestQueueMutex);
+      inFlight--;
+      postNext();
+    });
     s->r = requestQueue.front();
     requestQueue.pop();
     run(s);
@@ -369,6 +378,20 @@ void Client::sendRequest(Request* request)
   TP_MUTEX_LOCKER(d->requestQueueMutex);
   d->requestQueue.emplace(request);
   d->postNext();
+}
+
+//##################################################################################################
+size_t Client::pending() const
+{
+  TP_MUTEX_LOCKER(d->requestQueueMutex);
+  return d->requestQueue.size() + d->inFlight;
+}
+
+//##################################################################################################
+size_t Client::inFlight() const
+{
+  TP_MUTEX_LOCKER(d->requestQueueMutex);
+  return d->inFlight;
 }
 
 }
