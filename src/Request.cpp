@@ -203,7 +203,7 @@ void Request::fail(boost::system::error_code ec, const std::string& whatFailed)
 {
   d->ec = ec;
   d->whatFailed = whatFailed;
-  tpDebug() << "Request::fail " << whatFailed;
+  tpWarning() << "Request::fail " << whatFailed;
 }
 
 //##################################################################################################
