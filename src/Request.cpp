@@ -16,7 +16,10 @@ struct Request::Private
   boost::beast::http::verb verb{boost::beast::http::verb::get};
   std::string endpoint;
   std::unordered_map<std::string, std::string> headerData;
-  std::unordered_map<std::string, std::string> formData;
+  std::unordered_map<std::string, std::string> formPostData;
+  std::unordered_map<std::string, std::string> formGetData;
+  std::string rawBodyData;
+  std::string contentType;
   BodyEncodeMode bodyEncodeMode{BodyEncodeMode::URL};
 
   boost::beast::http::request<boost::beast::http::string_body> request;
@@ -120,15 +123,46 @@ const std::unordered_map<std::string, std::string>& Request::headerData() const
 }
 
 //##################################################################################################
-void Request::addFormData(const std::string& key, const std::string& value)
+void Request::addFormPostData(const std::string& key, const std::string& value)
 {
-  d->formData[key] = value;
+  d->formPostData[key] = value;
 }
 
 //##################################################################################################
-const std::unordered_map<std::string, std::string>& Request::formData() const
+const std::unordered_map<std::string, std::string>& Request::formPostData() const
 {
-  return d->formData;
+  return d->formPostData;
+}
+
+//##################################################################################################
+void Request::addFormGetData(const std::string& key, const std::string& value)
+{
+  d->formGetData[key] = value;
+}
+
+//##################################################################################################
+const std::unordered_map<std::string, std::string>& Request::formGetData() const
+{
+  return d->formGetData;
+}
+
+//##################################################################################################
+void Request::setRawBodyData(const std::string& rawBodyData, const std::string& contentType)
+{
+  d->rawBodyData = rawBodyData;
+  d->contentType = contentType;
+}
+
+//##################################################################################################
+const std::string& Request::rawBodyData() const
+{
+  return d->rawBodyData;
+}
+
+//##################################################################################################
+const std::string& Request::contentType() const
+{
+  return d->contentType;
 }
 
 //##################################################################################################
@@ -159,22 +193,29 @@ void Request::generateRequest()
   if(d->bodyEncodeMode == BodyEncodeMode::JSON)
   {
     d->request.set(boost::beast::http::field::content_type, "application/json");
-    encodedBody = jsonEncodedForm(d->formData);
-
-    d->request.target(d->endpoint + "?" + urlEncodedForm(d->formData));
+    encodedBody = jsonEncodedForm(d->formPostData);
   }
   else if(d->bodyEncodeMode == BodyEncodeMode::URL)
   {
     d->request.set(boost::beast::http::field::content_type, "application/x-www-form-urlencoded");
-    encodedBody = urlEncodedForm(d->formData);
+    encodedBody = urlEncodedForm(d->formPostData);
   }
 
   else if(d->bodyEncodeMode == BodyEncodeMode::MultiPart)
   {
     std::string boundary = "--d2cef45b-1cf5-42fb-875e-395bcd81293f";
     d->request.set(boost::beast::http::field::content_type, "multipart/form-data; boundary=\"" + boundary + "\"");
-    encodedBody = multipartEncodedForm(d->formData, boundary);
+    encodedBody = multipartEncodedForm(d->formPostData, boundary);
   }
+
+  else if(d->bodyEncodeMode == BodyEncodeMode::Raw)
+  {
+    d->request.set(boost::beast::http::field::content_type, d->contentType);
+    encodedBody = d->rawBodyData;
+  }
+
+  if(!d->formGetData.empty())
+    d->request.target(d->endpoint + "?" + urlEncodedForm(d->formGetData));
 
   d->request.set(boost::beast::http::field::content_length,  encodedBody.size());
   d->request.body() = encodedBody;

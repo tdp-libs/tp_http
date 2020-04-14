@@ -63,10 +63,25 @@ public:
   const std::unordered_map<std::string, std::string>& headerData() const;
 
   //################################################################################################
-  void addFormData(const std::string& key, const std::string& value);
+  void addFormPostData(const std::string& key, const std::string& value);
 
   //################################################################################################
-  const std::unordered_map<std::string, std::string>& formData() const;
+  const std::unordered_map<std::string, std::string>& formPostData() const;
+
+  //################################################################################################
+  void addFormGetData(const std::string& key, const std::string& value);
+
+  //################################################################################################
+  const std::unordered_map<std::string, std::string>& formGetData() const;
+
+  //################################################################################################
+  void setRawBodyData(const std::string& rawBodyData, const std::string& contentType);
+
+  //################################################################################################
+  const std::string& rawBodyData() const;
+
+  //################################################################################################
+  const std::string& contentType() const;
 
   //################################################################################################
   void setBodyEncodeMode(BodyEncodeMode bodyEncodeMode);
