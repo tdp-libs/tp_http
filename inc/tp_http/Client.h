@@ -9,6 +9,7 @@ namespace tp_http
 class Request;
 
 //##################################################################################################
+//! This Client class is used to queue up http requests.
 class Client
 {
 public:
@@ -19,12 +20,15 @@ public:
   ~Client();
 
   //################################################################################################
+  //! Add a request to the queue to be processed, this takes ownership.
   void sendRequest(Request* request);
 
   //################################################################################################
+  //! Returns the number of requests in the queue as well as those inFlight.
   size_t pending() const;
 
   //################################################################################################
+  //! Returns the number of requests that have been started but not yet completed.
   size_t inFlight() const;
 
 private:
