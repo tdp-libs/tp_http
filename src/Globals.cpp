@@ -18,7 +18,21 @@ std::string urlEncode(const std::string& value)
 
   for(const auto c : value)
   {
-    if(std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+    auto isalnum = [](char c)
+    {
+      if(c>='a' && c<='z')
+        return true;
+
+      if(c>='A' && c<='Z')
+        return true;
+
+      if(c>='0' && c<='9')
+        return true;
+
+      return false;
+    };
+
+    if(isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
     {
       escaped << c;
       continue;
