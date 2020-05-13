@@ -1,3 +1,7 @@
-
-list(APPEND TP_LIBRARIES "ssl")
-list(APPEND TP_LIBRARIES "crypto")
+if(WIN32)
+  list(APPEND TP_LIBRARIES "libssl")
+  list(APPEND TP_LIBRARIES "libcrypto")
+else()
+  list(APPEND TP_LIBRARIES "ssl")
+  list(APPEND TP_LIBRARIES "crypto")
+endif()
