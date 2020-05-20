@@ -6,6 +6,7 @@ custom_boost{
   LIBS    += -llibboost_system
   LIBS    += -llibcrypto64MT
   LIBS    += -llibssl64MT
+  LIBS    += -lcrypt32
 }else{
   LIBS    += -lboost_system
   LIBS    += -lssl

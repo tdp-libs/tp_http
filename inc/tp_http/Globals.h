@@ -9,6 +9,11 @@
 #  define TP_HTTP_SHARED_EXPORT TP_IMPORT
 #endif
 
+namespace boost::asio::ssl
+{
+class context;
+}
+
 //##################################################################################################
 namespace tp_http
 {
@@ -40,6 +45,9 @@ std::string urlEncodedForm(const std::unordered_map<std::string, std::string>& f
 
 //##################################################################################################
 std::string multipartEncodedForm(const std::unordered_map<std::string, std::string>& formData, const std::string& boundary);
+
+//##################################################################################################
+void addSSLVerifyPaths(boost::asio::ssl::context& sslCtx);
 
 }
 

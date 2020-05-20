@@ -58,12 +58,7 @@ struct SocketDetails_lt
     deadlineTimer(ioContext),
     handle(new Handle_lt(this))
   {
-    {
-      sslCtx.set_default_verify_paths();
-      boost::system::error_code ec;
-      //sslCtx.add_verify_path("/etc/ssl/certs/", ec);
-    }
-
+    addSSLVerifyPaths(sslCtx);
   }
 
   //################################################################################################

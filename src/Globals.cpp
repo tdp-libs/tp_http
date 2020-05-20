@@ -2,10 +2,15 @@
 
 #include "json.hpp"
 
+#include <boost/asio/ssl/context.hpp>
+
 #include <sstream>
 #include <iomanip>
 
-//##################################################################################################
+#ifdef TP_WIN32
+#include <wincrypt.h>
+#endif
+
 namespace tp_http
 {
 
@@ -101,6 +106,49 @@ std::string multipartEncodedForm(const std::unordered_map<std::string, std::stri
     result += "--" + boundary + "--\r\n";
 
   return (result);
+}
+
+#ifdef TP_WIN32
+//##################################################################################################
+namespace
+{
+// https://stackoverflow.com/questions/39772878/reliable-way-to-get-root-ca-certificates-on-windows
+void add_windows_root_certs(boost::asio::ssl::context &sslCtx)
+{
+  HCERTSTORE hStore = CertOpenSystemStore(0, L"ROOT");
+  if (hStore == nullptr) {
+    return;
+  }
+
+  X509_STORE *store = X509_STORE_new();
+  PCCERT_CONTEXT pContext = nullptr;
+  while ((pContext = CertEnumCertificatesInStore(hStore, pContext)) != nullptr) {
+    X509 *x509 = d2i_X509(nullptr,
+                          reinterpret_cast<const unsigned char **>(const_cast<const BYTE**>(&pContext->pbCertEncoded)),
+                          long(pContext->cbCertEncoded));
+    if(x509 != nullptr)
+    {
+      X509_STORE_add_cert(store, x509);
+      X509_free(x509);
+    }
+  }
+
+  CertFreeCertificateContext(pContext);
+  CertCloseStore(hStore, 0);
+
+  SSL_CTX_set_cert_store(sslCtx.native_handle(), store);
+}
+}
+#endif
+
+//##################################################################################################
+void addSSLVerifyPaths(boost::asio::ssl::context& sslCtx)
+{
+#ifdef TP_WIN32
+  add_windows_root_certs(sslCtx);
+#else
+  sslCtx.set_default_verify_paths();
+#endif
 }
 
 }

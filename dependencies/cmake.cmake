@@ -1,4 +1,5 @@
 if(WIN32)
+  list(APPEND TP_LIBRARIES "crypt32")
   list(APPEND TP_LIBRARIES "libeay32")
   list(APPEND TP_LIBRARIES "ssleay32")
 else()
