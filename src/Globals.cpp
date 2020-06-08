@@ -9,6 +9,7 @@
 
 #ifdef TP_WIN32
 #include <wincrypt.h>
+#include <tchar.h>
 #endif
 
 namespace tp_http
@@ -115,7 +116,7 @@ namespace
 // https://stackoverflow.com/questions/39772878/reliable-way-to-get-root-ca-certificates-on-windows
 void add_windows_root_certs(boost::asio::ssl::context &sslCtx)
 {
-  HCERTSTORE hStore = CertOpenSystemStore(0, L"ROOT");
+  HCERTSTORE hStore = CertOpenSystemStore(0, _T("ROOT"));
   if (hStore == nullptr) {
     return;
   }
