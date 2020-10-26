@@ -123,6 +123,9 @@ public:
   boost::beast::http::response<boost::beast::http::string_body>& mutableResult();
 
   //################################################################################################
+  boost::beast::http::response_parser<boost::beast::http::string_body>& mutableParser();
+
+  //################################################################################################
   void fail(boost::system::error_code ec, const std::string& whatFailed);
 
   //################################################################################################

@@ -23,7 +23,9 @@ struct Request::Private
   BodyEncodeMode bodyEncodeMode{BodyEncodeMode::URL};
 
   boost::beast::http::request<boost::beast::http::string_body> request;
-  boost::beast::http::response<boost::beast::http::string_body> result;
+  //boost::beast::http::response<boost::beast::http::string_body> result;
+  boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+
   boost::system::error_code ec;
   std::string whatFailed;
   bool completed{false};
@@ -32,7 +34,7 @@ struct Request::Private
   Private(const std::function<void(const Request&)>& completionHandler_):
     completionHandler(completionHandler_)
   {
-
+    parser.body_limit(512 * 1024 * 1024);
   }
 };
 
@@ -230,13 +232,19 @@ const boost::beast::http::request<boost::beast::http::string_body>& Request::req
 //##################################################################################################
 const boost::beast::http::response<boost::beast::http::string_body>& Request::result() const
 {
-  return d->result;
+  return d->parser.get();
 }
 
 //##################################################################################################
 boost::beast::http::response<boost::beast::http::string_body>& Request::mutableResult()
 {
-  return d->result;
+  return d->parser.get();
+}
+
+//##################################################################################################
+boost::beast::http::response_parser<boost::beast::http::string_body>& Request::mutableParser()
+{
+  return d->parser;
 }
 
 //##################################################################################################
@@ -244,7 +252,7 @@ void Request::fail(boost::system::error_code ec, const std::string& whatFailed)
 {
   d->ec = ec;
   d->whatFailed = whatFailed;
-  tpWarning() << "Request::fail " << whatFailed;
+  tpWarning() << "Request::fail " << whatFailed << " ec: " << d->ec.message();
 }
 
 //##################################################################################################

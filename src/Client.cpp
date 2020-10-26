@@ -245,12 +245,17 @@ struct Client::Private
         s->sslSocket.set_verify_mode(boost::asio::ssl::verify_peer);
         //s->sslSocket.set_verify_callback(boost::asio::ssl::rfc2818_verification(s->r->host()));
 
-        //if(!SSL_set_tlsext_host_name(s->sslSocket.native_handle(), const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
-        if(SSL_ctrl(s->sslSocket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name, const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
+#ifdef TP_LINUX
+        if(SSL_ctrl(s->sslSocket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
         {
           return s->r->fail(ec, "SSL_set_tlsext_host_name failed");
         }
-
+#else
+        if(!SSL_set_tlsext_host_name(s->sslSocket.native_handle(), const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
+        {
+          return s->r->fail(ec, "SSL_set_tlsext_host_name failed");
+        }
+#endif
 
         s->sslSocket.async_handshake(boost::asio::ssl::stream_base::client,
                                      [this, s](boost::system::error_code ec)
@@ -325,9 +330,9 @@ struct Client::Private
       };
 
       if(s->r->protocol() == Protocol::HTTP)
-        boost::beast::http::async_read(s->socket, s->buffer, s->r->mutableResult(), handler);
+        boost::beast::http::async_read(s->socket, s->buffer, s->r->mutableParser(), handler);
       else
-        boost::beast::http::async_read(s->sslSocket, s->buffer, s->r->mutableResult(), handler);
+        boost::beast::http::async_read(s->sslSocket, s->buffer, s->r->mutableParser(), handler);
     }
     catch(...)
     {
