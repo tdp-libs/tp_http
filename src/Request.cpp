@@ -219,7 +219,7 @@ void Request::generateRequest()
   if(!d->formGetData.empty())
     d->request.target(d->endpoint + "?" + urlEncodedForm(d->formGetData));
 
-  d->request.set(boost::beast::http::field::content_length,  encodedBody.size());
+  d->request.set(boost::beast::http::field::content_length,  std::to_string(encodedBody.size()));
   d->request.body() = encodedBody;
 }
 
