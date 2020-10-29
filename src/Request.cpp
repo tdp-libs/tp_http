@@ -1,6 +1,7 @@
 #include "tp_http/Request.h"
 
 #include "tp_utils/DebugUtils.h"
+#include "tp_utils/StackTrace.h"
 
 namespace tp_http
 {
@@ -253,6 +254,7 @@ void Request::fail(boost::system::error_code ec, const std::string& whatFailed)
   d->ec = ec;
   d->whatFailed = whatFailed;
   tpWarning() << "Request::fail " << whatFailed << " ec: " << d->ec.message();
+  tp_utils::printStackTrace();
 }
 
 //##################################################################################################

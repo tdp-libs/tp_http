@@ -2,6 +2,8 @@
 #include "tp_http/Request.h"
 
 #include "tp_utils/MutexUtils.h"
+#include "tp_utils/DebugUtils.h"
+#include "tp_utils/StackTrace.h"
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -79,7 +81,10 @@ struct SocketDetails_lt
   void checkTimeout()
   {
     if(deadlineTimer.expires_at() <= boost::asio::deadline_timer::traits_type::now())
+    {
+      tpDebug() << "Timeout reached.....";
       socket.close();
+    }
   }
 
   //################################################################################################
@@ -319,7 +324,7 @@ struct Client::Private
     if(ec)
       return s->r->fail(ec, "write");
 
-    s->setTimeout(30);
+    s->setTimeout(240);
 
     try
     {
