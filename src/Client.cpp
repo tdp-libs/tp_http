@@ -250,7 +250,7 @@ struct Client::Private
         s->sslSocket.set_verify_mode(boost::asio::ssl::verify_peer);
         //s->sslSocket.set_verify_callback(boost::asio::ssl::rfc2818_verification(s->r->host()));
 
-#ifdef TP_LINUX
+#ifdef TP_LINUX_
         if(SSL_ctrl(s->sslSocket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
         {
           return s->r->fail(ec, "SSL_set_tlsext_host_name failed");
