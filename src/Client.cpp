@@ -42,7 +42,7 @@ struct SocketDetails_lt
   boost::asio::ip::tcp::resolver resolver;
   boost::asio::ip::tcp::socket socket;
 
-  boost::asio::ssl::context sslCtx;
+  std::unique_ptr<boost::asio::ssl::context> sslCtx;
   boost::asio::ssl::stream<boost::asio::ip::tcp::socket&> sslSocket;
 
   boost::asio::deadline_timer deadlineTimer;
@@ -55,12 +55,11 @@ struct SocketDetails_lt
     completed(completed_),
     resolver(ioContext),
     socket(ioContext),
-    sslCtx(boost::asio::ssl::context::sslv23),
-    sslSocket(socket, sslCtx),
+    sslCtx(makeCTX()),
+    sslSocket(socket, *sslCtx),
     deadlineTimer(ioContext),
     handle(new Handle_lt(this))
   {
-    addSSLVerifyPaths(sslCtx);
   }
 
   //################################################################################################
@@ -75,6 +74,14 @@ struct SocketDetails_lt
     delete r;
 
     completed();
+  }
+
+  //################################################################################################
+  static std::unique_ptr<boost::asio::ssl::context> makeCTX()
+  {
+    auto ctx = std::make_unique<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+    addSSLVerifyPaths(*ctx);
+    return ctx;
   }
 
   //################################################################################################
@@ -250,8 +257,12 @@ struct Client::Private
         s->sslSocket.set_verify_mode(boost::asio::ssl::verify_peer);
         //s->sslSocket.set_verify_callback(boost::asio::ssl::rfc2818_verification(s->r->host()));
 
+#ifdef TP_HTTP_VERBOSE
+        tpWarning() << "Host name: " << s->r->host();
+#endif
+
 #ifdef TP_LINUX_
-        if(SSL_ctrl(s->sslSocket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
+        if(!SSL_ctrl(s->sslSocket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
         {
           return s->r->fail(ec, "SSL_set_tlsext_host_name failed");
         }
@@ -260,6 +271,26 @@ struct Client::Private
         {
           return s->r->fail(ec, "SSL_set_tlsext_host_name failed");
         }
+#endif
+
+#ifdef TP_HTTP_VERBOSE
+        s->sslSocket.set_verify_callback([](bool preverified, boost::asio::ssl::verify_context& ctx)
+        {
+          // The verify callback can be used to check whether the certificate that is
+          // being presented is valid for the peer. For example, RFC 2818 describes
+          // the steps involved in doing this for HTTPS. Consult the OpenSSL
+          // documentation for more details. Note that the callback is called once
+          // for each certificate in the certificate chain, starting from the root
+          // certificate authority.
+
+          // In this example we will simply print the certificate's subject name.
+          char subject_name[256];
+          X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+          X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+          tpWarning() << "Verifying " << subject_name;
+
+          return preverified;
+        });
 #endif
 
         s->sslSocket.async_handshake(boost::asio::ssl::stream_base::client,

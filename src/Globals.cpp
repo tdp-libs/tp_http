@@ -1,5 +1,8 @@
 #include "tp_http/Globals.h"
 
+#include "tp_utils/DebugUtils.h"
+#include "tp_utils/FileUtils.h"
+
 #include "json.hpp"
 
 #include <boost/asio/ssl/context.hpp>
@@ -145,10 +148,41 @@ void add_windows_root_certs(boost::asio::ssl::context &sslCtx)
 //##################################################################################################
 void addSSLVerifyPaths(boost::asio::ssl::context& sslCtx)
 {
+#ifdef TP_HTTP_VERBOSE
+  tpDebug() << "Adding certs";
+#endif
+
 #ifdef TP_WIN32
   add_windows_root_certs(sslCtx);
 #else
   sslCtx.set_default_verify_paths();
+
+  auto addPath = [&](const std::string& path)
+  {
+    if(tp_utils::exists(path))
+      sslCtx.add_verify_path(path);
+  };
+
+  auto addFile = [&](const std::string& path)
+  {
+    if(tp_utils::exists(path))
+      sslCtx.load_verify_file(path);
+  };
+
+  addPath("/etc/ssl/certs");
+  addPath("/system/etc/security/cacerts");
+  addPath("/usr/local/share/certs");
+  addPath("/etc/pki/tls/certs");
+  addPath("/etc/openssl/certs");
+  addPath("/var/ssl/certs");
+
+  addFile("/etc/ssl/certs/ca-certificates.crt");
+  addFile("/etc/pki/tls/certs/ca-bundle.crt");
+  addFile("/etc/ssl/ca-bundle.pem");
+  addFile("/etc/pki/tls/cacert.pem");
+  addFile("/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem");
+  addFile("/etc/ssl/cert.pem");
+
 #endif
 }
 
