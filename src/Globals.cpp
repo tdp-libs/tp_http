@@ -149,7 +149,7 @@ void add_windows_root_certs(boost::asio::ssl::context &sslCtx)
 void addSSLVerifyPaths(boost::asio::ssl::context& sslCtx)
 {
 #ifdef TP_HTTP_VERBOSE
-  tpDebug() << "Adding certs";
+  tpWarning() << "Adding certs";
 #endif
 
 #ifdef TP_WIN32

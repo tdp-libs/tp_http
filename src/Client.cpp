@@ -89,7 +89,7 @@ struct SocketDetails_lt
   {
     if(deadlineTimer.expires_at() <= boost::asio::deadline_timer::traits_type::now())
     {
-      tpDebug() << "Timeout reached.....";
+      tpWarning() << "Timeout reached.....";
       socket.close();
     }
   }
