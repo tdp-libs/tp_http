@@ -261,17 +261,13 @@ struct Client::Private
         tpWarning() << "Host name: " << s->r->host();
 #endif
 
-#ifdef TP_LINUX_
-        if(!SSL_ctrl(s->sslSocket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
-        {
-          return s->r->fail(ec, "SSL_set_tlsext_host_name failed");
-        }
-#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
         if(!SSL_set_tlsext_host_name(s->sslSocket.native_handle(), const_cast<void*>(static_cast<const void*>(s->r->host().data()))))
         {
           return s->r->fail(ec, "SSL_set_tlsext_host_name failed");
         }
-#endif
+#pragma GCC diagnostic pop
 
 #ifdef TP_HTTP_VERBOSE
         s->sslSocket.set_verify_callback([](bool preverified, boost::asio::ssl::verify_context& ctx)
