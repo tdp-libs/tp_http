@@ -49,6 +49,16 @@ Request::Request(const std::function<void(const Request&)>& completionHandler):
 //##################################################################################################
 Request::~Request()
 {
+#ifdef TP_HTTP_VERBOSE
+  tpWarning() << "Request completed ("
+                 "protocol: " << protocolToString(d->protocol) <<
+                 ", host: " << d->host <<
+                 ", port: " << d->port <<
+                 ", verb: " << boost::beast::http::to_string(d->verb) <<
+                 ", endpoint: " << d->endpoint <<
+                 ", result: " << int(d->parser.get().result()) << ")";
+#endif
+
   d->completionHandler(*this);
   delete d;
 }

@@ -19,6 +19,25 @@ namespace tp_http
 {
 
 //##################################################################################################
+std::string protocolToString(Protocol protocol)
+{
+  switch(protocol)
+  {
+  case Protocol::HTTP: return "HTTP";
+  case Protocol::HTTPS: return "HTTPS";
+  }
+   return "HTTP";
+}
+
+//##################################################################################################
+Protocol protocolFromString(const std::string& protocol)
+{
+  if(protocol == "HTTP")  return Protocol::HTTP;
+  if(protocol == "HTTPS") return Protocol::HTTPS;
+  return Protocol::HTTP;
+}
+
+//##################################################################################################
 std::string urlEncode(const std::string& value)
 {
   std::ostringstream escaped;

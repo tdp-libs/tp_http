@@ -26,6 +26,12 @@ enum class Protocol
 };
 
 //##################################################################################################
+std::string protocolToString(Protocol protocol);
+
+//##################################################################################################
+Protocol protocolFromString(const std::string& protocol);
+
+//##################################################################################################
 enum class BodyEncodeMode
 {
   JSON,      //!< The formPostData will be encoded as JSON and the content type set to "application/json".
