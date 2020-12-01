@@ -56,6 +56,9 @@ Request::~Request()
                  ", port: " << d->port <<
                  ", verb: " << boost::beast::http::to_string(d->verb) <<
                  ", endpoint: " << d->endpoint <<
+                 ", body size: " << d->parser.get().body().size() <<
+                 ", error: " << d->whatFailed <<
+                 ", completed: " << d->completed <<
                  ", result: " << int(d->parser.get().result()) << ")";
 #endif
 
