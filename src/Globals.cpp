@@ -19,6 +19,12 @@ namespace tp_http
 {
 
 //##################################################################################################
+std::vector<std::string> protocols()
+{
+  return {"HTTP", "HTTPS"};
+}
+
+//##################################################################################################
 std::string protocolToString(Protocol protocol)
 {
   switch(protocol)
