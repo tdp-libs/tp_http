@@ -119,7 +119,7 @@ struct SocketDetails_lt
 //##################################################################################################
 struct Client::Private
 {
-  const size_t maxInFlight{4};
+  const size_t maxInFlight;
 
   boost::asio::io_context ioContext;
   std::unique_ptr<boost::asio::io_context::work> work;
@@ -130,7 +130,8 @@ struct Client::Private
   size_t inFlight{0};
 
   //################################################################################################
-  Private():
+  Private(size_t maxInFlight_):
+    maxInFlight(maxInFlight_),
     work(std::make_unique<boost::asio::io_context::work>(ioContext)),
     thread([&]{ioContext.run();})
   {
@@ -403,8 +404,8 @@ struct Client::Private
 };
 
 //##################################################################################################
-Client::Client():
-  d(new Private())
+Client::Client(size_t maxInFlight):
+  d(new Private(maxInFlight))
 {
 
 }
@@ -418,6 +419,7 @@ Client::~Client()
 //##################################################################################################
 void Client::sendRequest(Request* request)
 {
+  request->setAddedToClient();
   TP_MUTEX_LOCKER(d->requestQueueMutex);
   d->requestQueue.emplace(request);
   d->postNext();

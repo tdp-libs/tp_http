@@ -135,6 +135,12 @@ public:
   //! Set to true once the request has completed.
   bool completed() const;
 
+  //################################################################################################
+  void setAddedToClient();
+
+  //################################################################################################
+  bool addedToClient() const;
+
 private:
   struct Private;
   friend struct Private;

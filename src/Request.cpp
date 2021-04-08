@@ -30,6 +30,7 @@ struct Request::Private
   boost::system::error_code ec;
   std::string whatFailed;
   bool completed{false};
+  bool addedToClient{false};
 
   //################################################################################################
   Private(const std::function<void(const Request&)>& completionHandler_):
@@ -280,6 +281,18 @@ void Request::setCompleted()
 bool Request::completed() const
 {
   return d->completed;
+}
+
+//##################################################################################################
+void Request::setAddedToClient()
+{
+  d->addedToClient = true;
+}
+
+//##################################################################################################
+bool Request::addedToClient() const
+{
+  return d->addedToClient;
 }
 
 }
