@@ -42,7 +42,6 @@ struct SocketDetails_lt
   boost::asio::ip::tcp::resolver resolver;
   boost::asio::ip::tcp::socket socket;
 
-  std::unique_ptr<boost::asio::ssl::context> sslCtx;
   boost::asio::ssl::stream<boost::asio::ip::tcp::socket&> sslSocket;
 
   boost::asio::deadline_timer deadlineTimer;
@@ -51,11 +50,10 @@ struct SocketDetails_lt
   std::shared_ptr<Handle_lt> handle;
 
   //################################################################################################
-  SocketDetails_lt(boost::asio::io_context& ioContext, const std::function<void()>& completed_):
+  SocketDetails_lt(boost::asio::io_context& ioContext, const std::shared_ptr<boost::asio::ssl::context>& sslCtx, const std::function<void()>& completed_):
     completed(completed_),
     resolver(ioContext),
     socket(ioContext),
-    sslCtx(makeCTX()),
     sslSocket(socket, *sslCtx),
     deadlineTimer(ioContext),
     handle(new Handle_lt(this))
@@ -74,14 +72,6 @@ struct SocketDetails_lt
     delete r;
 
     completed();
-  }
-
-  //################################################################################################
-  static std::unique_ptr<boost::asio::ssl::context> makeCTX()
-  {
-    auto ctx = std::make_unique<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
-    addSSLVerifyPaths(*ctx);
-    return ctx;
   }
 
   //################################################################################################
@@ -121,6 +111,7 @@ struct Client::Private
 {
   const size_t maxInFlight;
 
+  std::shared_ptr<boost::asio::ssl::context> sslCtx;
   boost::asio::io_context ioContext;
   std::unique_ptr<boost::asio::io_context::work> work;
   std::thread thread;
@@ -132,6 +123,7 @@ struct Client::Private
   //################################################################################################
   Private(size_t maxInFlight_):
     maxInFlight(maxInFlight_),
+    sslCtx(makeCTX()),
     work(std::make_unique<boost::asio::io_context::work>(ioContext)),
     thread([&]{ioContext.run();})
   {
@@ -161,6 +153,14 @@ struct Client::Private
   }
 
   //################################################################################################
+  static std::shared_ptr<boost::asio::ssl::context> makeCTX()
+  {
+    auto ctx = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+    addSSLVerifyPaths(*ctx);
+    return ctx;
+  }
+
+  //################################################################################################
   void postNext()
   {
     if(inFlight>=maxInFlight)
@@ -171,7 +171,7 @@ struct Client::Private
 
     inFlight++;
 
-    auto s = std::make_shared<SocketDetails_lt>(ioContext, [&]
+    auto s = std::make_shared<SocketDetails_lt>(ioContext, sslCtx, [&]
     {
       TP_MUTEX_LOCKER(requestQueueMutex);
       inFlight--;
