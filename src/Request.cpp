@@ -239,7 +239,11 @@ void Request::generateRequest()
 }
 
 //##################################################################################################
-const boost::beast::http::request<boost::beast::http::string_body>& Request::request() const
+#if BOOST_VERSION >= 107000
+  const boost::beast::http::request<boost::beast::http::string_body>& Request::request() const
+#else
+  boost::beast::http::request<boost::beast::http::string_body>& Request::request() const
+#endif
 {
   return d->request;
 }

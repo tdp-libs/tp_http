@@ -336,9 +336,14 @@ struct Client::Private
       };
 
       if(s->r->protocol() == Protocol::HTTP)
+      {
         boost::beast::http::async_write(s->socket, s->r->request(), handler);
+      }
       else
+      {
+
         boost::beast::http::async_write(s->sslSocket, s->r->request(), handler);
+      }
     }
     catch(...)
     {
