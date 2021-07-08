@@ -14,6 +14,7 @@ namespace tp_http
 //! New up one of these for each request.
 class Request
 {
+  TP_NONCOPYABLE(Request);
 public:
   //################################################################################################
   Request(const std::function<void(const Request&)>& completionHandler);

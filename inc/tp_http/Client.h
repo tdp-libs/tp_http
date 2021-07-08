@@ -12,6 +12,7 @@ class Request;
 //! This Client class is used to queue up http requests.
 class Client
 {
+  TP_NONCOPYABLE(Client);
 public:
   //################################################################################################
   Client(size_t maxInFlight=4);
