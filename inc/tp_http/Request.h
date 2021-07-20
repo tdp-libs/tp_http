@@ -132,7 +132,7 @@ public:
   boost::beast::http::response_parser<boost::beast::http::string_body>& mutableParser();
 
   //################################################################################################
-  void fail(boost::system::error_code ec, const std::string& whatFailed);
+  void fail(const boost::system::error_code& ec, const std::string& whatFailed);
 
   //################################################################################################
   void setCompleted();

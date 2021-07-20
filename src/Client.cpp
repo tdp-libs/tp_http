@@ -191,7 +191,7 @@ struct Client::Private
       // Look up the domain name
       s->resolver.async_resolve(s->r->host(),
                                 std::to_string(s->r->port()),
-                                [this, s](boost::system::error_code ec, const boost::asio::ip::tcp::resolver::results_type& results)
+                                [this, s](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::results_type& results)
       {
         onResolve(s, ec, results);
       });
@@ -206,7 +206,7 @@ struct Client::Private
   //################################################################################################
   // Called once the IP address has been resolved.
   void onResolve(const std::shared_ptr<SocketDetails_lt>& s,
-                 boost::system::error_code ec,
+                 const boost::system::error_code& ec,
                  const boost::asio::ip::tcp::resolver::results_type& results)
   {
     if(ec)
@@ -234,7 +234,7 @@ struct Client::Private
   //################################################################################################
   // Send the HTTP request or HTTPS handshake to the remote host.
   void onConnect(const std::shared_ptr<SocketDetails_lt>& s,
-                 boost::system::error_code ec,
+                 const boost::system::error_code& ec,
                  const boost::asio::ip::tcp::resolver::iterator& iterator)
   {
     (void)iterator;
@@ -295,7 +295,7 @@ struct Client::Private
 #endif
 
         s->sslSocket.async_handshake(boost::asio::ssl::stream_base::client,
-                                     [this, s](boost::system::error_code ec)
+                                     [this, s](const boost::system::error_code& ec)
         {
           s->clearTimeout();
           onHandshake(s, ec);
@@ -312,7 +312,7 @@ struct Client::Private
   //################################################################################################
   // Send the HTTPS request to the remote host now that handshake has been performed.
   void onHandshake(const std::shared_ptr<SocketDetails_lt>& s,
-                   boost::system::error_code ec)
+                   const boost::system::error_code& ec)
   {
     if(ec)
       return s->r->fail(ec, "handshake");
@@ -322,14 +322,14 @@ struct Client::Private
 
   //################################################################################################
   void asyncWrite(const std::shared_ptr<SocketDetails_lt>& s,
-                  boost::system::error_code ec)
+                  const boost::system::error_code& ec)
   {
     s->setTimeout(30);
     s->r->generateRequest();
 
     try
     {
-      auto handler = [this, s](boost::system::error_code ec, size_t bytesTransferred)
+      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
       {
         s->clearTimeout();
         onWrite(s, ec, bytesTransferred);
@@ -353,7 +353,7 @@ struct Client::Private
 
   //################################################################################################
   void onWrite(const std::shared_ptr<SocketDetails_lt>& s,
-               boost::system::error_code ec,
+               const boost::system::error_code& ec,
                size_t bytesTransferred)
   {
     boost::ignore_unused(bytesTransferred);
@@ -365,7 +365,7 @@ struct Client::Private
 
     try
     {
-      auto handler = [this, s](boost::system::error_code ec, size_t bytesTransferred)
+      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
       {
         s->clearTimeout();
         onRead(s, ec, bytesTransferred);
@@ -384,7 +384,7 @@ struct Client::Private
 
   //################################################################################################
   void onRead(const std::shared_ptr<SocketDetails_lt>& s,
-              boost::system::error_code ec,
+              const boost::system::error_code& ec,
               size_t bytesTransferred)
   {
     TP_UNUSED(bytesTransferred);
@@ -394,17 +394,20 @@ struct Client::Private
 
     s->r->setCompleted();
 
-    try
     {
-      s->socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-    }
-    catch(...)
-    {
-      return s->r->fail(ec, "shutdown exception");
-    }
+      boost::system::error_code ec;
+      try
+      {
+        s->socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+      }
+      catch(...)
+      {
+        return s->r->fail(ec, "shutdown exception");
+      }
 
-    if(ec && ec != boost::system::errc::not_connected)
-      return s->r->fail(ec, "shutdown");
+      if(ec && ec != boost::system::errc::not_connected)
+        return s->r->fail(ec, "shutdown");
+    }
   }
 };
 

@@ -27,7 +27,7 @@ struct Request::Private
   //boost::beast::http::response<boost::beast::http::string_body> result;
   boost::beast::http::response_parser<boost::beast::http::string_body> parser;
 
-  boost::system::error_code ec;
+  //boost::system::error_code ec;
   std::string whatFailed;
   bool completed{false};
   bool addedToClient{false};
@@ -267,11 +267,14 @@ boost::beast::http::response_parser<boost::beast::http::string_body>& Request::m
 }
 
 //##################################################################################################
-void Request::fail(boost::system::error_code ec, const std::string& whatFailed)
+void Request::fail(const boost::system::error_code& ec, const std::string& whatFailed)
 {
-  d->ec = ec;
   d->whatFailed = whatFailed;
-  tpWarning() << "Request::fail " << whatFailed << " ec: " << d->ec.message();
+
+  // WARNING: If you get a crash here it may be bost headers not mathing the compiled boost_system
+  // make sure you don't have multiple versions of Boost installed.
+  tpWarning() << "Request::fail " << whatFailed << " ec: " << ec.message();
+
   tp_utils::printStackTrace();
 }
 
