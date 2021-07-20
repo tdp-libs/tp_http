@@ -191,7 +191,7 @@ struct Client::Private
       // Look up the domain name
       s->resolver.async_resolve(s->r->host(),
                                 std::to_string(s->r->port()),
-                                [this, s](boost::system::error_code ec, boost::asio::ip::tcp::resolver::results_type results)
+                                [this, s](boost::system::error_code ec, const boost::asio::ip::tcp::resolver::results_type& results)
       {
         onResolve(s, ec, results);
       });
@@ -207,7 +207,7 @@ struct Client::Private
   // Called once the IP address has been resolved.
   void onResolve(const std::shared_ptr<SocketDetails_lt>& s,
                  boost::system::error_code ec,
-                 boost::asio::ip::tcp::resolver::results_type results)
+                 const boost::asio::ip::tcp::resolver::results_type& results)
   {
     if(ec)
       return s->r->fail(ec, "resolve");
@@ -219,7 +219,7 @@ struct Client::Private
       boost::asio::async_connect(s->socket,
                                  results.begin(),
                                  results.end(),
-                                 [this, s](const boost::system::error_code& ec, boost::asio::ip::tcp::resolver::iterator iterator)
+                                 [this, s](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::iterator& iterator)
       {
         s->clearTimeout();
         onConnect(s, ec, iterator);
@@ -235,7 +235,7 @@ struct Client::Private
   // Send the HTTP request or HTTPS handshake to the remote host.
   void onConnect(const std::shared_ptr<SocketDetails_lt>& s,
                  boost::system::error_code ec,
-                 boost::asio::ip::tcp::resolver::iterator iterator)
+                 const boost::asio::ip::tcp::resolver::iterator& iterator)
   {
     (void)iterator;
 
