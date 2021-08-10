@@ -271,11 +271,13 @@ void Request::fail(const boost::system::error_code& ec, const std::string& whatF
 {
   d->whatFailed = whatFailed;
 
+#ifdef TP_HTTP_DEBUG
   // WARNING: If you get a crash here it may be bost headers not mathing the compiled boost_system
   // make sure you don't have multiple versions of Boost installed.
   tpWarning() << "Request::fail " << whatFailed << " ec: " << ec.message();
 
   tp_utils::printStackTrace();
+#endif
 }
 
 //##################################################################################################
