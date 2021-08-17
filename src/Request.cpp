@@ -269,6 +269,7 @@ boost::beast::http::response_parser<boost::beast::http::string_body>& Request::m
 //##################################################################################################
 void Request::fail(const boost::system::error_code& ec, const std::string& whatFailed)
 {
+  TP_UNUSED(ec);
   d->whatFailed = whatFailed;
 
 #ifdef TP_HTTP_DEBUG
