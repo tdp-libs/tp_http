@@ -161,25 +161,28 @@ struct Client::Private
   }
 
   //################################################################################################
-  void postNext()
+  std::shared_ptr<SocketDetails_lt> postNext()
   {
     if(inFlight>=maxInFlight)
-      return;
+      return std::shared_ptr<SocketDetails_lt>();
 
     if(requestQueue.empty())
-      return;
+      return std::shared_ptr<SocketDetails_lt>();
 
     inFlight++;
 
     auto s = std::make_shared<SocketDetails_lt>(ioContext, sslCtx, [&]
     {
+      std::shared_ptr<SocketDetails_lt> s;
       TP_MUTEX_LOCKER(requestQueueMutex);
       inFlight--;
-      postNext();
+      s = postNext();
     });
     s->r = requestQueue.front();
     requestQueue.pop();
+
     run(s);
+    return s;
   }
 
   //################################################################################################
@@ -428,9 +431,10 @@ Client::~Client()
 void Client::sendRequest(Request* request)
 {
   request->setAddedToClient();
+  std::shared_ptr<SocketDetails_lt> s;
   TP_MUTEX_LOCKER(d->requestQueueMutex);
   d->requestQueue.emplace(request);
-  d->postNext();
+  s = d->postNext();
 }
 
 //##################################################################################################
