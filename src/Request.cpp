@@ -305,4 +305,10 @@ bool Request::addedToClient() const
   return d->addedToClient;
 }
 
+//##################################################################################################
+const std::string& Request::whatFailed() const
+{
+  return d->whatFailed;
+}
+
 }
