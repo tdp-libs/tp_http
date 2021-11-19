@@ -44,16 +44,36 @@ enum class BodyEncodeMode
 };
 
 //##################################################################################################
+struct PostData
+{
+  std::string data;
+  std::string filename;
+
+  PostData()=default;
+
+  //################################################################################################
+  PostData(const std::string& data_, const std::string& filename_=std::string()):
+    data(data_),
+    filename(filename_)
+  {
+
+  }
+};
+
+//##################################################################################################
 std::string urlEncode(const std::string& value);
 
 //##################################################################################################
-std::string jsonEncodedForm(const std::unordered_map<std::string, std::string>& formData);
+std::string jsonEncodedForm(const std::unordered_map<std::string, PostData>& formData);
+
+//##################################################################################################
+std::string urlEncodedForm(const std::unordered_map<std::string, PostData>& formData);
 
 //##################################################################################################
 std::string urlEncodedForm(const std::unordered_map<std::string, std::string>& formData);
 
 //##################################################################################################
-std::string multipartEncodedForm(const std::unordered_map<std::string, std::string>& formData, const std::string& boundary);
+std::string multipartEncodedForm(const std::unordered_map<std::string, PostData>& formData, const std::string& boundary);
 
 //##################################################################################################
 void addSSLVerifyPaths(boost::asio::ssl::context& sslCtx);

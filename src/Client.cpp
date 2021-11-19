@@ -36,7 +36,8 @@ struct Handle_lt
 //##################################################################################################
 struct SocketDetails_lt
 {
-  Request* r;
+  Request* r;  
+  boost::beast::http::serializer<true,boost::beast::http::string_body>* serializer{nullptr};
   const std::function<void()> completed;
 
   boost::asio::ip::tcp::resolver resolver;
@@ -69,6 +70,7 @@ struct SocketDetails_lt
     }
 
     deadlineTimer.cancel();
+    delete serializer;
     delete r;
 
     completed();
@@ -80,6 +82,8 @@ struct SocketDetails_lt
     if(deadlineTimer.expires_at() <= boost::asio::deadline_timer::traits_type::now())
     {
       tpWarning() << "Timeout reached.....";
+      boost::system::error_code ec;
+      r->fail(ec, "Timeout reached.....");
       socket.close();
     }
   }
@@ -324,29 +328,48 @@ struct Client::Private
   }
 
   //################################################################################################
-  void asyncWrite(const std::shared_ptr<SocketDetails_lt>& s,
-                  const boost::system::error_code& ec)
+  void asyncWriteSome(const std::shared_ptr<SocketDetails_lt>& s,
+                      const boost::system::error_code& ec)
   {
     s->setTimeout(30);
-    s->r->generateRequest();
 
     try
     {
       auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
       {
-        s->clearTimeout();
-        onWrite(s, ec, bytesTransferred);
+        TP_UNUSED(bytesTransferred);
+        if(s->serializer->is_done())
+        {
+          s->clearTimeout();
+          onWrite(s, ec);
+        }
+        else
+        {
+          asyncWriteSome(s, ec);
+        }
       };
 
       if(s->r->protocol() == Protocol::HTTP)
-      {
-        boost::beast::http::async_write(s->socket, s->r->request(), handler);
-      }
+        boost::beast::http::async_write_some(s->socket, *s->serializer, handler);
       else
-      {
+        boost::beast::http::async_write_some(s->sslSocket, *s->serializer, handler);
+    }
+    catch(...)
+    {
+      return s->r->fail(ec, "async_write exception");
+    }
+  }
 
-        boost::beast::http::async_write(s->sslSocket, s->r->request(), handler);
-      }
+  //################################################################################################
+  void asyncWrite(const std::shared_ptr<SocketDetails_lt>& s,
+                  const boost::system::error_code& ec)
+  {
+    s->r->generateRequest();
+
+    try
+    {
+      s->serializer = new boost::beast::http::serializer<true,boost::beast::http::string_body>(s->r->request());
+      asyncWriteSome(s, ec);
     }
     catch(...)
     {
@@ -356,11 +379,8 @@ struct Client::Private
 
   //################################################################################################
   void onWrite(const std::shared_ptr<SocketDetails_lt>& s,
-               const boost::system::error_code& ec,
-               size_t bytesTransferred)
+               const boost::system::error_code& ec)
   {
-    boost::ignore_unused(bytesTransferred);
-
     if(ec)
       return s->r->fail(ec, "write");
 

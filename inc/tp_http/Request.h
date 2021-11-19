@@ -79,10 +79,10 @@ public:
   \param key of the value to add.
   \param value
   */
-  void addFormPostData(const std::string& key, const std::string& value);
+  void addFormPostData(const std::string& key, const PostData& value);
 
   //################################################################################################
-  const std::unordered_map<std::string, std::string>& formPostData() const;
+  const std::unordered_map<std::string, PostData>& formPostData() const;
 
   //################################################################################################
   //! Add form data to be encoded on the end of the URL.

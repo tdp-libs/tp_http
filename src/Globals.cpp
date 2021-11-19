@@ -1,4 +1,4 @@
-#include "tp_http/Globals.h"
+﻿#include "tp_http/Globals.h"
 
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/FileUtils.h"
@@ -82,14 +82,34 @@ std::string urlEncode(const std::string& value)
 }
 
 //##################################################################################################
-std::string jsonEncodedForm(const std::unordered_map<std::string, std::string>& formData)
+std::string jsonEncodedForm(const std::unordered_map<std::string, PostData>& formData)
 {
   nlohmann::json j;
 
   for(const auto& i : formData)
-    j[i.first] = i.second;
+    j[i.first] = i.second.data;
 
   return j.dump();
+}
+
+//##################################################################################################
+std::string urlEncodedForm(const std::unordered_map<std::string, PostData>& formData)
+{
+  size_t size{0};
+  for(const auto& pair : formData)
+    size += 1 + pair.first.size() + pair.second.data.size();
+
+  std::string result;
+  result.reserve(size*2);
+  for(const auto& pair : formData)
+  {
+    if(!result.empty())
+      result += '&';
+
+    result += urlEncode(pair.first) + '=' + urlEncode(pair.second.data);
+  }
+
+  return result;
 }
 
 //##################################################################################################
@@ -113,11 +133,11 @@ std::string urlEncodedForm(const std::unordered_map<std::string, std::string>& f
 }
 
 //##################################################################################################
-std::string multipartEncodedForm(const std::unordered_map<std::string, std::string>& formData, const std::string& boundary)
+std::string multipartEncodedForm(const std::unordered_map<std::string, PostData>& formData, const std::string& boundary)
 {
   size_t size{0};
   for(const auto& pair : formData)
-    size += 1 + pair.first.size() + pair.second.size();
+    size += 1 + pair.first.size() + pair.second.data.size() + pair.second.filename.size();
 
   //Allocate extra space for the boundaries and associated header overhead.
   size += (formData.size()+1) * (100 + boundary.size());
@@ -127,8 +147,13 @@ std::string multipartEncodedForm(const std::unordered_map<std::string, std::stri
   for(const auto& pair : formData)
   {
     result += "--" + boundary + "\r\n";
-    result += "Content-Disposition: form-data; name=\"" + pair.first+ "\"\r\n\r\n";
-    result += pair.second + "\r\n";
+    result += "Content-Disposition: form-data; name=\"" + pair.first + "\"";
+
+    if(!pair.second.filename.empty())
+      result += "; filename=\"" + pair.second.filename + "\"";
+
+    result += "\r\n\r\n";
+    result += pair.second.data + "\r\n";
   }
 
   if(!result.empty())
