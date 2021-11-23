@@ -2,6 +2,7 @@
 
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/StackTrace.h"
+#include "tp_utils/TimeUtils.h"
 
 namespace tp_http
 {

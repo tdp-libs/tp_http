@@ -118,7 +118,7 @@ struct Client::Private
   std::shared_ptr<boost::asio::ssl::context> sslCtx;
   boost::asio::io_context ioContext;
   std::unique_ptr<boost::asio::io_context::work> work;
-  std::thread thread;
+  std::vector<std::thread*> threads;
 
   TPMutex requestQueueMutex{TPM};
   std::queue<Request*> requestQueue;
@@ -128,10 +128,10 @@ struct Client::Private
   Private(size_t maxInFlight_):
     maxInFlight(maxInFlight_),
     sslCtx(makeCTX()),
-    work(std::make_unique<boost::asio::io_context::work>(ioContext)),
-    thread([&]{ioContext.run();})
+    work(std::make_unique<boost::asio::io_context::work>(ioContext))
   {
-
+    for(int i=0; i<1; i++)
+      threads.push_back(new std::thread([&]{ioContext.run();}));
   }
 
   //################################################################################################
@@ -153,7 +153,12 @@ struct Client::Private
         empty.pop();
       }
     }
-    thread.join();
+
+    for(const auto& thread : threads)
+    {
+      thread->join();
+      delete thread;
+    }
   }
 
   //################################################################################################
@@ -368,8 +373,25 @@ struct Client::Private
 
     try
     {
-      s->serializer = new boost::beast::http::serializer<true,boost::beast::http::string_body>(s->r->request());
-      asyncWriteSome(s, ec);
+      if(auto v=s->r->request().payload_size(); v && (*v)<524288)
+      {
+        auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+        {
+          TP_UNUSED(bytesTransferred);
+          s->clearTimeout();
+          onWrite(s, ec);
+        };
+
+        if(s->r->protocol() == Protocol::HTTP)
+          boost::beast::http::async_write(s->socket, s->r->request(), handler);
+        else
+          boost::beast::http::async_write(s->sslSocket, s->r->request(), handler);
+      }
+      else
+      {
+        s->serializer = new boost::beast::http::serializer<true,boost::beast::http::string_body>(s->r->request());
+        asyncWriteSome(s, ec);
+      }
     }
     catch(...)
     {
