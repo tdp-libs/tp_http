@@ -114,12 +114,14 @@ public:
 
   //################################################################################################
   //! The request to send to boost beast.
-
 #if BOOST_VERSION >= 107000
   const boost::beast::http::request<boost::beast::http::string_body>& request() const;
 #else
   boost::beast::http::request<boost::beast::http::string_body>& request() const;
 #endif
+
+  //################################################################################################
+  boost::beast::http::request<boost::beast::http::string_body>& mutableRequest() const;
 
   //################################################################################################
   //! The response received from boost beast.

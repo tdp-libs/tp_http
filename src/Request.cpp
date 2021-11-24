@@ -250,6 +250,12 @@ void Request::generateRequest()
 }
 
 //##################################################################################################
+boost::beast::http::request<boost::beast::http::string_body>& Request::mutableRequest() const
+{
+  return d->request;
+}
+
+//##################################################################################################
 const boost::beast::http::response<boost::beast::http::string_body>& Request::result() const
 {
   return d->parser.get();
