@@ -10,6 +10,7 @@ namespace tp_http
 //##################################################################################################
 struct Request::Private
 {
+  const std::function<void(float)> progressCallback;
   const std::function<void(const Request&)> completionHandler;
 
   Protocol protocol{Protocol::HTTPS};
@@ -25,25 +26,33 @@ struct Request::Private
   BodyEncodeMode bodyEncodeMode{BodyEncodeMode::URL};
 
   boost::beast::http::request<boost::beast::http::string_body> request;
-  //boost::beast::http::response<boost::beast::http::string_body> result;
   boost::beast::http::response_parser<boost::beast::http::string_body> parser;
 
-  //boost::system::error_code ec;
   std::string whatFailed;
   bool completed{false};
   bool addedToClient{false};
 
   //################################################################################################
-  Private(const std::function<void(const Request&)>& completionHandler_):
+  Private(const std::function<void(float)>& progressCallback_,
+          const std::function<void(const Request&)>& completionHandler_):
+    progressCallback(progressCallback_),
     completionHandler(completionHandler_)
   {
-    parser.body_limit(512 * 1024 * 1024);
+    parser.body_limit(4096ull * 1024 * 1024);
   }
 };
 
 //##################################################################################################
 Request::Request(const std::function<void(const Request&)>& completionHandler):
-  d(new Private(completionHandler))
+  d(new Private(std::function<void(float)>(), completionHandler))
+{
+
+}
+
+//##################################################################################################
+Request::Request(const std::function<void(float)>& progressCallback,
+                 const std::function<void(const Request&)>& completionHandler):
+  d(new Private(progressCallback, completionHandler))
 {
 
 }
@@ -241,9 +250,9 @@ void Request::generateRequest()
 
 //##################################################################################################
 #if BOOST_VERSION >= 107000
-  const boost::beast::http::request<boost::beast::http::string_body>& Request::request() const
+const boost::beast::http::request<boost::beast::http::string_body>& Request::request() const
 #else
-  boost::beast::http::request<boost::beast::http::string_body>& Request::request() const
+boost::beast::http::request<boost::beast::http::string_body>& Request::request() const
 #endif
 {
   return d->request;
@@ -276,8 +285,7 @@ boost::beast::http::response_parser<boost::beast::http::string_body>& Request::m
 //##################################################################################################
 void Request::fail(const boost::system::error_code& ec, const std::string& whatFailed)
 {
-  TP_UNUSED(ec);
-  d->whatFailed = whatFailed;
+  d->whatFailed = whatFailed + " ec: " + ec.message();
 
 #ifdef TP_HTTP_DEBUG
   // WARNING: If you get a crash here it may be bost headers not mathing the compiled boost_system
@@ -316,6 +324,13 @@ bool Request::addedToClient() const
 const std::string& Request::whatFailed() const
 {
   return d->whatFailed;
+}
+
+//##################################################################################################
+void Request::setProgress(float fraction)
+{
+  if(d->progressCallback)
+    d->progressCallback(fraction);
 }
 
 }

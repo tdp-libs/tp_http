@@ -7,6 +7,11 @@
 
 #include <functional>
 
+namespace tp_utils
+{
+
+}
+
 namespace tp_http
 {
 
@@ -18,6 +23,10 @@ class Request
 public:
   //################################################################################################
   Request(const std::function<void(const Request&)>& completionHandler);
+
+  //################################################################################################
+  Request(const std::function<void(float)>& progressCallback,
+          const std::function<void(const Request&)>& completionHandler);
 
   //################################################################################################
   ~Request();
@@ -151,6 +160,9 @@ public:
 
   //################################################################################################
   const std::string& whatFailed() const;
+
+  //################################################################################################
+  void setProgress(float fraction);
 
 private:
   struct Private;

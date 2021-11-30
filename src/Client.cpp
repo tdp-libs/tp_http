@@ -225,6 +225,7 @@ struct Client::Private
       return s->r->fail(ec, "resolve");
 
     s->setTimeout(30);
+    s->r->setProgress(0.05f);
 
     try
     {
@@ -253,6 +254,8 @@ struct Client::Private
 
     if(ec)
       return s->r->fail(ec, "connect");
+
+    s->r->setProgress(0.10f);
 
     // If this is HTTP we can just get on and send the request, else if it is HTTPS we need to
     // perform a handshake first.
@@ -329,20 +332,32 @@ struct Client::Private
     if(ec)
       return s->r->fail(ec, "handshake");
 
+    s->r->setProgress(0.15f);
+
     asyncWrite(s, ec);
   }
 
   //################################################################################################
   void asyncWriteSome(const std::shared_ptr<SocketDetails_lt>& s,
+                      size_t totalSize,
+                      size_t totalSent,
                       const boost::system::error_code& ec)
   {
     s->setTimeout(30);
 
     try
     {
-      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+      auto handler = [this, s, totalSize, totalSent](const boost::system::error_code& ec, size_t bytesTransferred)
       {
-        TP_UNUSED(bytesTransferred);
+        size_t t = totalSent + bytesTransferred;
+        if(totalSize>0)
+        {
+          float f = float(t) / float(totalSize);
+          f*=0.4f;
+          f+=0.2f;
+          s->r->setProgress(f);
+        }
+
         if(s->serializer->is_done())
         {
           s->clearTimeout();
@@ -350,7 +365,7 @@ struct Client::Private
         }
         else
         {
-          asyncWriteSome(s, ec);
+          asyncWriteSome(s, totalSize, t, ec);
         }
       };
 
@@ -370,10 +385,16 @@ struct Client::Private
                   const boost::system::error_code& ec)
   {
     s->r->generateRequest();
+    s->r->setProgress(0.20f);
 
     try
     {
-      if(auto v=s->r->request().payload_size(); v && (*v)<524288)
+      size_t totalSize=0;
+      auto v=s->r->request().payload_size();
+      if(v)
+        totalSize = *v;
+
+      if(v && (*v)<524288)
       {
         auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
         {
@@ -390,7 +411,7 @@ struct Client::Private
       else
       {
         s->serializer = new boost::beast::http::serializer<true,boost::beast::http::string_body>(s->r->request());
-        asyncWriteSome(s, ec);
+        asyncWriteSome(s, totalSize, 0, ec);
       }
     }
     catch(...)
@@ -405,6 +426,7 @@ struct Client::Private
   {
     if(ec)
       return s->r->fail(ec, "write");
+    s->r->setProgress(0.60f);
 
     s->setTimeout(240);
 
@@ -438,6 +460,7 @@ struct Client::Private
       return s->r->fail(ec, "read");
 
     s->r->setCompleted();
+    s->r->setProgress(1.0f);
 
     {
       boost::system::error_code ec;
