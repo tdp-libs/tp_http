@@ -22,10 +22,12 @@ class Request
   TP_NONCOPYABLE(Request);
 public:
   //################################################################################################
-  Request(const std::function<void(const Request&)>& completionHandler);
+  Request(const std::weak_ptr<int>& alive,
+          const std::function<void(const Request&)>& completionHandler);
 
   //################################################################################################
-  Request(const std::function<void(float)>& progressCallback,
+  Request(const std::weak_ptr<int>& alive,
+          const std::function<void(float)>& progressCallback,
           const std::function<void(const Request&)>& completionHandler);
 
   //################################################################################################

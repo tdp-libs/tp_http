@@ -10,6 +10,7 @@ namespace tp_http
 //##################################################################################################
 struct Request::Private
 {
+  std::weak_ptr<int> alive;
   const std::function<void(float)> progressCallback;
   const std::function<void(const Request&)> completionHandler;
 
@@ -33,8 +34,10 @@ struct Request::Private
   bool addedToClient{false};
 
   //################################################################################################
-  Private(const std::function<void(float)>& progressCallback_,
+  Private(const std::weak_ptr<int>& alive_,
+          const std::function<void(float)>& progressCallback_,
           const std::function<void(const Request&)>& completionHandler_):
+    alive(alive_),
     progressCallback(progressCallback_),
     completionHandler(completionHandler_)
   {
@@ -43,16 +46,18 @@ struct Request::Private
 };
 
 //##################################################################################################
-Request::Request(const std::function<void(const Request&)>& completionHandler):
-  d(new Private(std::function<void(float)>(), completionHandler))
+Request::Request(const std::weak_ptr<int>& alive,
+                 const std::function<void(const Request&)>& completionHandler):
+  d(new Private(alive, std::function<void(float)>(), completionHandler))
 {
 
 }
 
 //##################################################################################################
-Request::Request(const std::function<void(float)>& progressCallback,
+Request::Request(const std::weak_ptr<int>& alive,
+                 const std::function<void(float)>& progressCallback,
                  const std::function<void(const Request&)>& completionHandler):
-  d(new Private(progressCallback, completionHandler))
+  d(new Private(alive, progressCallback, completionHandler))
 {
 
 }
@@ -73,7 +78,8 @@ Request::~Request()
                  ", result: " << int(d->parser.get().result()) << ")";
 #endif
 
-  d->completionHandler(*this);
+  if(!d->alive.expired())
+    d->completionHandler(*this);
   delete d;
 }
 
