@@ -10,6 +10,8 @@ namespace tp_http
 //##################################################################################################
 struct Request::Private
 {
+  TP_REF_COUNT_OBJECTS("tp_http::Request::Private");
+
   std::weak_ptr<int> alive;
   const std::function<void(float)> progressCallback;
   const std::function<void(const Request&)> completionHandler;
@@ -335,7 +337,7 @@ const std::string& Request::whatFailed() const
 //##################################################################################################
 void Request::setProgress(float fraction)
 {
-  if(d->progressCallback)
+  if(d->progressCallback && !d->alive.expired())
     d->progressCallback(fraction);
 }
 

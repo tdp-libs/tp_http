@@ -28,6 +28,7 @@ struct SocketDetails_lt;
 // This is used to handle timer events that arrive after the message has been deleted.
 struct Handle_lt
 {
+  TP_REF_COUNT_OBJECTS("tp_http::Handle_lt");
   std::mutex mutex;
   SocketDetails_lt* s;
   Handle_lt(SocketDetails_lt* s_):s(s_){}
@@ -36,6 +37,8 @@ struct Handle_lt
 //##################################################################################################
 struct SocketDetails_lt
 {
+  TP_REF_COUNT_OBJECTS("tp_http::SocketDetails_lt");
+
   Request* r;  
   boost::beast::http::serializer<true,boost::beast::http::string_body>* serializer{nullptr};
   const std::function<void()> completed;
@@ -113,6 +116,8 @@ struct SocketDetails_lt
 //##################################################################################################
 struct Client::Private
 {
+  TP_REF_COUNT_OBJECTS("tp_http::Client::Private");
+
   const size_t maxInFlight;
 
   std::shared_ptr<boost::asio::ssl::context> sslCtx;
