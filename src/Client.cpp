@@ -348,7 +348,7 @@ struct Client::Private
                       size_t totalSent,
                       const boost::system::error_code& ec)
   {
-    s->setTimeout(30);
+    s->setTimeout(60);
 
     try
     {
