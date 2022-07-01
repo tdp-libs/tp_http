@@ -39,7 +39,7 @@ struct SocketDetails_lt
 {
   TP_REF_COUNT_OBJECTS("tp_http::SocketDetails_lt");
 
-  Request* r;  
+  Request* r;
   boost::beast::http::serializer<true,boost::beast::http::string_body>* serializer{nullptr};
   const std::function<void()> completed;
 
@@ -62,6 +62,7 @@ struct SocketDetails_lt
     deadlineTimer(ioContext),
     handle(new Handle_lt(this))
   {
+
   }
 
   //################################################################################################
@@ -239,6 +240,14 @@ struct Client::Private
                                  results.end(),
                                  [this, s](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::iterator& iterator)
       {
+        if(!ec)
+        {
+          const int timeout = 240 * 1000;
+          ::setsockopt(s->socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
+          ::setsockopt(s->socket.native_handle(), SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
+        }
+
+
         s->clearTimeout();
         onConnect(s, ec, iterator);
       });
