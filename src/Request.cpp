@@ -1,8 +1,7 @@
 #include "tp_http/Request.h"
 
 #include "tp_utils/DebugUtils.h"
-#include "tp_utils/StackTrace.h"
-#include "tp_utils/TimeUtils.h"
+#include "tp_utils/RefCount.h"
 
 namespace tp_http
 {

@@ -3,7 +3,7 @@
 
 #include "tp_utils/MutexUtils.h"
 #include "tp_utils/DebugUtils.h"
-#include "tp_utils/StackTrace.h"
+#include "tp_utils/RefCount.h"
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
