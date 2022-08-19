@@ -248,11 +248,20 @@ void Request::generateRequest()
     encodedBody = d->rawBodyData;
   }
 
+  else if(d->bodyEncodeMode == BodyEncodeMode::Empty)
+  {
+    //d->request.set(boost::beast::http::field::content_type, d->contentType);
+    encodedBody = d->rawBodyData;
+  }
+
   if(!d->formGetData.empty())
     d->request.target(d->endpoint + "?" + urlEncodedForm(d->formGetData));
 
-  d->request.set(boost::beast::http::field::content_length,  std::to_string(encodedBody.size()));
-  d->request.body() = encodedBody;
+  if(d->bodyEncodeMode != BodyEncodeMode::Empty)
+  {
+    d->request.set(boost::beast::http::field::content_length,  std::to_string(encodedBody.size()));
+    d->request.body() = encodedBody;
+  }
 }
 
 //##################################################################################################

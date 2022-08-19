@@ -40,7 +40,8 @@ enum class BodyEncodeMode
   JSON,      //!< The formPostData will be encoded as JSON and the content type set to "application/json".
   URL,       //!< The formPostData URL encoded and the content type set to "application/x-www-form-urlencoded".
   MultiPart, //!< The formPostData will be multi part form encoded and the content type set to "multipart/form-data; boundary=".
-  Raw        //!< The rawBodyData and contentType will be used.
+  Raw,       //!< The rawBodyData and contentType will be used.
+  Empty
 };
 
 //##################################################################################################
