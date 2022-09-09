@@ -301,7 +301,7 @@ boost::beast::http::response_parser<boost::beast::http::string_body>& Request::m
 //##################################################################################################
 void Request::fail(const boost::system::error_code& ec, const std::string& whatFailed)
 {
-  d->whatFailed = whatFailed + " ec: " + ec.message();
+  d->whatFailed = whatFailed + " ec: " + ec.message() + " code: " + std::to_string(ec.value());
 
 #ifdef TP_HTTP_DEBUG
   // WARNING: If you get a crash here it may be bost headers not mathing the compiled boost_system

@@ -434,6 +434,8 @@ struct Client::Private
     }
   }
 
+
+
   //################################################################################################
   void onWrite(const std::shared_ptr<SocketDetails_lt>& s,
                const boost::system::error_code& ec)
@@ -442,10 +444,13 @@ struct Client::Private
       return s->r->fail(ec, "write");
     s->r->setProgress(0.60f);
 
-    s->setTimeout(240);
 
     try
     {
+
+
+#if 0
+      s->setTimeout(240);
       auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
       {
         s->clearTimeout();
@@ -456,10 +461,47 @@ struct Client::Private
         boost::beast::http::async_read(s->socket, s->buffer, s->r->mutableParser(), handler);
       else
         boost::beast::http::async_read(s->sslSocket, s->buffer, s->r->mutableParser(), handler);
+#else
+      s->setTimeout(60);
+      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+      {
+        onReadSome(s, ec, bytesTransferred);
+      };
+      if(s->r->protocol() == Protocol::HTTP)
+        boost::beast::http::async_read_some(s->socket, s->buffer, s->r->mutableParser(), handler);
+      else
+        boost::beast::http::async_read_some(s->sslSocket, s->buffer, s->r->mutableParser(), handler);
+#endif
     }
     catch(...)
     {
       return s->r->fail(ec, "async_read exception");
+    }
+  }
+
+  //################################################################################################
+  void onReadSome(const std::shared_ptr<SocketDetails_lt>& s,
+                  const boost::system::error_code& ec,
+                  size_t bytesTransferred)
+  {
+    if(!ec && !s->r->mutableParser().is_done())
+    {
+      s->setTimeout(60);
+
+      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+      {
+        onReadSome(s, ec, bytesTransferred);
+      };
+
+      if(s->r->protocol() == Protocol::HTTP)
+        boost::beast::http::async_read_some(s->socket, s->buffer, s->r->mutableParser(), handler);
+      else
+        boost::beast::http::async_read_some(s->sslSocket, s->buffer, s->r->mutableParser(), handler);
+    }
+    else
+    {
+      s->clearTimeout();
+      onRead(s, ec, bytesTransferred);
     }
   }
 
