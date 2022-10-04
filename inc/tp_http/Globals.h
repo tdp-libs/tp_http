@@ -3,6 +3,8 @@
 
 #include "tp_utils/StringID.h"
 
+#include <unordered_map>
+
 #if defined(TP_HTTP_LIBRARY)
 #  define TP_HTTP_SHARED_EXPORT TP_EXPORT
 #else
