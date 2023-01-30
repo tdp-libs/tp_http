@@ -6,9 +6,9 @@
 #include <unordered_map>
 
 #if defined(TP_HTTP_LIBRARY)
-#  define TP_HTTP_SHARED_EXPORT TP_EXPORT
+#  define TP_HTTP_EXPORT TP_EXPORT
 #else
-#  define TP_HTTP_SHARED_EXPORT TP_IMPORT
+#  define TP_HTTP_EXPORT TP_IMPORT
 #endif
 
 namespace boost::asio::ssl
