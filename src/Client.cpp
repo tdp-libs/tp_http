@@ -447,8 +447,6 @@ struct Client::Private
 
     try
     {
-
-
 #if 0
       s->setTimeout(240);
       auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
