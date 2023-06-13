@@ -442,8 +442,7 @@ struct Client::Private
   {
     if(ec)
       return s->r->fail(ec, "write");
-    s->r->setProgress(0.60f);
-
+    s->r->setProgress(1.0f);
 
     try
     {
@@ -484,6 +483,23 @@ struct Client::Private
   {
     if(!ec && !s->r->mutableParser().is_done())
     {
+      if(s->r->mutableParser().is_header_done())
+      {
+        auto total = s->r->mutableParser().content_length();
+        auto remaining = s->r->mutableParser().content_length_remaining();
+        if(total && remaining)
+        {
+          uint64_t t = *total;
+          uint64_t r = *remaining;
+          if(t>=r)
+          {
+            float f = 1.0f - float(r)/float(t);
+            s->r->setProgress(f);
+          }
+        }
+      }
+
+
       s->setTimeout(60);
 
       auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
