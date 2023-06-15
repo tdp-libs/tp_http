@@ -126,8 +126,11 @@ struct Client::Private
   std::unique_ptr<boost::asio::io_context::work> work;
   std::vector<std::thread*> threads;
 
+  uint32_t priorityMultiplier{100};
+  bool incrementPriority{true};
+
   TPMutex requestQueueMutex{TPM};
-  std::queue<Request*> requestQueue;
+  std::deque<std::pair<Request*, uint32_t>> requestQueue;
   size_t inFlight{0};
 
   //################################################################################################
@@ -147,17 +150,14 @@ struct Client::Private
     ioContext.stop();
     {
       //The order here is important, we need to clear empty while messageQueueMutex is unlocked.
-      std::queue<Request*> empty;
+      std::deque<std::pair<Request*, uint32_t>> empty;
       {
         TP_MUTEX_LOCKER(requestQueueMutex);
         requestQueue.swap(empty);
       }
 
-      while(!empty.empty())
-      {
-        delete empty.front();
-        empty.pop();
-      }
+      for(const auto& r : empty)
+        delete r.first;
     }
 
     for(const auto& thread : threads)
@@ -193,8 +193,8 @@ struct Client::Private
       inFlight--;
       s = postNext();
     });
-    s->r = requestQueue.front();
-    requestQueue.pop();
+    s->r = requestQueue.front().first;
+    requestQueue.pop_front();
 
     run(s);
     return s;
@@ -563,12 +563,36 @@ Client::~Client()
 }
 
 //##################################################################################################
-void Client::sendRequest(Request* request)
+void Client::sendRequest(Request* request, Priority priority)
 {
   request->setAddedToClient();
   std::shared_ptr<SocketDetails_lt> s;
   TP_MUTEX_LOCKER(d->requestQueueMutex);
-  d->requestQueue.emplace(request);
+
+  uint32_t p = d->priorityMultiplier * uint32_t(priority);
+
+  if(priority == Priority::Low)
+    d->requestQueue.emplace_back(request, p);
+  else
+  {
+    auto i=d->requestQueue.begin();
+    while(i!=d->requestQueue.end() && i->second>=p)
+      ++i;
+
+    std::pair<Request*, uint32_t> tmp{request, p};
+
+    if(d->incrementPriority)
+    {
+      for(; i!=d->requestQueue.end(); ++i)
+      {
+        std::swap(*i, tmp);
+        tmp.second++;
+      }
+    }
+
+    d->requestQueue.emplace(i, tmp);
+  }
+
   s = d->postNext();
 }
 
