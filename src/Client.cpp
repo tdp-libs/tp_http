@@ -4,6 +4,8 @@
 #include "tp_utils/MutexUtils.h"
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/RefCount.h"
+#include "tp_utils/TimeUtils.h"
+#include "tp_utils/TimerThread.h"
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -62,7 +64,8 @@ struct SocketDetails_lt
     deadlineTimer(ioContext),
     handle(new Handle_lt(this))
   {
-
+    buffer.max_size(16384);
+    buffer.prepare(16384);
   }
 
   //################################################################################################
@@ -126,20 +129,28 @@ struct Client::Private
   std::unique_ptr<boost::asio::io_context::work> work;
   std::vector<std::thread*> threads;
 
-  uint32_t priorityMultiplier{100};
+  uint32_t priorityMultiplier{10};
   bool incrementPriority{true};
 
   TPMutex requestQueueMutex{TPM};
   std::deque<std::pair<Request*, uint32_t>> requestQueue;
   size_t inFlight{0};
 
+  TPMutex statsMutex{TPM};
+  size_t bytesDownloaded{0};
+  size_t bytesUploaded{0};
+  size_t bpsDownloaded{0};
+  size_t bpsUploaded{0};
+
+  int64_t lastStatsUpdate{tp_utils::currentTimeMS()};
+
   //################################################################################################
-  Private(size_t maxInFlight_):
+  Private(size_t maxInFlight_, size_t nThreads):
     maxInFlight(maxInFlight_),
     sslCtx(makeCTX()),
     work(std::make_unique<boost::asio::io_context::work>(ioContext))
   {
-    for(int i=0; i<1; i++)
+    for(size_t i=0; i<nThreads; i++)
       threads.push_back(new std::thread([&]{ioContext.run();}));
   }
 
@@ -168,11 +179,41 @@ struct Client::Private
   }
 
   //################################################################################################
+  tp_utils::TimerThread updateStatsThread = tp_utils::TimerThread([&]
+  {
+    TP_MUTEX_LOCKER(statsMutex);
+
+    int64_t now = tp_utils::currentTimeMS();
+    int64_t delta = now - lastStatsUpdate;
+    lastStatsUpdate = now;
+
+    bpsDownloaded = (bytesDownloaded*1000) / delta;
+    bpsUploaded = (bytesUploaded*1000) / delta;
+
+    bytesDownloaded = 0;
+    bytesUploaded = 0;
+  }, 1000);
+
+  //################################################################################################
   static std::shared_ptr<boost::asio::ssl::context> makeCTX()
   {
     auto ctx = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
     addSSLVerifyPaths(*ctx);
     return ctx;
+  }
+
+  //################################################################################################
+  void recordBytesDownloaded(size_t bytes)
+  {
+    TP_MUTEX_LOCKER(statsMutex);
+    bytesDownloaded+=bytes;
+  }
+
+  //################################################################################################
+  void recordBytesUploaded(size_t bytes)
+  {
+    TP_MUTEX_LOCKER(statsMutex);
+    bytesUploaded+=bytes;
   }
 
   //################################################################################################
@@ -245,6 +286,8 @@ struct Client::Private
           const int timeout = 240 * 1000;
           ::setsockopt(s->socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
           ::setsockopt(s->socket.native_handle(), SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
+
+          //s->socket.set_option(boost::asio::ip::tcp::no_delay(true));
         }
 
 
@@ -285,7 +328,6 @@ struct Client::Private
 
         s->sslSocket.lowest_layer().set_option(boost::asio::ip::tcp::no_delay(true));
         s->sslSocket.set_verify_mode(boost::asio::ssl::verify_peer);
-        //s->sslSocket.set_verify_callback(boost::asio::ssl::rfc2818_verification(s->r->host()));
 
 #ifdef TP_HTTP_VERBOSE
         tpWarning() << "Host name: " << s->r->host();
@@ -363,6 +405,8 @@ struct Client::Private
     {
       auto handler = [this, s, totalSize, totalSent](const boost::system::error_code& ec, size_t bytesTransferred)
       {
+        recordBytesUploaded(bytesTransferred);
+
         size_t t = totalSent + bytesTransferred;
         if(totalSize>0)
         {
@@ -412,7 +456,7 @@ struct Client::Private
       {
         auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
         {
-          TP_UNUSED(bytesTransferred);
+          recordBytesUploaded(bytesTransferred);
           s->clearTimeout();
           onWrite(s, ec);
         };
@@ -481,6 +525,8 @@ struct Client::Private
                   const boost::system::error_code& ec,
                   size_t bytesTransferred)
   {
+    recordBytesDownloaded(bytesTransferred);
+
     if(!ec && !s->r->mutableParser().is_done())
     {
       if(s->r->mutableParser().is_header_done())
@@ -499,6 +545,7 @@ struct Client::Private
         }
       }
 
+      // tpDebug() << bytesTransferred << "   " << s->buffer.max_size();
 
       s->setTimeout(60);
 
@@ -524,7 +571,7 @@ struct Client::Private
               const boost::system::error_code& ec,
               size_t bytesTransferred)
   {
-    TP_UNUSED(bytesTransferred);
+    recordBytesDownloaded(bytesTransferred);
 
     if(ec)
       return s->r->fail(ec, "read");
@@ -550,8 +597,8 @@ struct Client::Private
 };
 
 //##################################################################################################
-Client::Client(size_t maxInFlight):
-  d(new Private(maxInFlight))
+Client::Client(size_t maxInFlight, size_t nThreads):
+  d(new Private(maxInFlight, nThreads))
 {
 
 }
@@ -608,6 +655,20 @@ size_t Client::inFlight() const
 {
   TP_MUTEX_LOCKER(d->requestQueueMutex);
   return d->inFlight;
+}
+
+//##################################################################################################
+size_t Client::bpsDownloaded() const
+{
+  TP_MUTEX_LOCKER(d->statsMutex);
+  return d->bpsDownloaded;
+}
+
+//##################################################################################################
+size_t Client::bpsUploaded() const
+{
+  TP_MUTEX_LOCKER(d->statsMutex);
+  return d->bpsUploaded;
 }
 
 }

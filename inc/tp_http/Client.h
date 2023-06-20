@@ -23,7 +23,7 @@ class Client
   TP_NONCOPYABLE(Client);
 public:
   //################################################################################################
-  Client(size_t maxInFlight=4);
+  Client(size_t maxInFlight=4, size_t nThreads=1);
 
   //################################################################################################
   ~Client();
@@ -39,6 +39,12 @@ public:
   //################################################################################################
   //! Returns the number of requests that have been started but not yet completed.
   size_t inFlight() const;
+
+  //################################################################################################
+  size_t bpsDownloaded() const;
+
+  //################################################################################################
+  size_t bpsUploaded() const;
 
 private:
   struct Private;
