@@ -27,7 +27,7 @@ public:
 
   //################################################################################################
   Request(const std::weak_ptr<int>& alive,
-          const std::function<void(float)>& progressCallback,
+          const std::function<void(float, size_t, size_t)>& progressCallback,
           const std::function<void(const Request&)>& completionHandler);
 
   //################################################################################################
@@ -164,7 +164,7 @@ public:
   const std::string& whatFailed() const;
 
   //################################################################################################
-  void setProgress(float fraction);
+  void setProgress(float fraction, size_t uploadSize, size_t downloadSize);
 
 private:
   struct Private;

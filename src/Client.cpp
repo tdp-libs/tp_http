@@ -55,6 +55,9 @@ struct SocketDetails_lt
 
   std::shared_ptr<Handle_lt> handle;
 
+  size_t uploadSize{0};
+  size_t downloadSize{0};
+
   //################################################################################################
   SocketDetails_lt(boost::asio::io_context& ioContext, const std::shared_ptr<boost::asio::ssl::context>& sslCtx, const std::function<void()>& completed_):
     completed(completed_),
@@ -272,7 +275,7 @@ struct Client::Private
       return s->r->fail(ec, "resolve");
 
     s->setTimeout(30);
-    s->r->setProgress(0.05f);
+    s->r->setProgress(0.05f, 0, 0);
 
     try
     {
@@ -312,7 +315,7 @@ struct Client::Private
     if(ec)
       return s->r->fail(ec, "connect");
 
-    s->r->setProgress(0.10f);
+    s->r->setProgress(0.10f, 0, 0);
 
     // If this is HTTP we can just get on and send the request, else if it is HTTPS we need to
     // perform a handshake first.
@@ -388,7 +391,7 @@ struct Client::Private
     if(ec)
       return s->r->fail(ec, "handshake");
 
-    s->r->setProgress(0.15f);
+    s->r->setProgress(0.15f, 0, 0);
 
     asyncWrite(s, ec);
   }
@@ -413,7 +416,7 @@ struct Client::Private
           float f = float(t) / float(totalSize);
           f*=0.4f;
           f+=0.2f;
-          s->r->setProgress(f);
+          s->r->setProgress(f, s->uploadSize, s->downloadSize);
         }
 
         if(s->serializer->is_done())
@@ -443,7 +446,6 @@ struct Client::Private
                   const boost::system::error_code& ec)
   {
     s->r->generateRequest();
-    s->r->setProgress(0.20f);
 
     try
     {
@@ -451,6 +453,9 @@ struct Client::Private
       auto v=s->r->request().payload_size();
       if(v)
         totalSize = *v;
+
+      s->uploadSize = totalSize;
+      s->r->setProgress(0.20f, s->uploadSize, s->downloadSize);
 
       if(v && (*v)<524288)
       {
@@ -486,7 +491,7 @@ struct Client::Private
   {
     if(ec)
       return s->r->fail(ec, "write");
-    s->r->setProgress(1.0f);
+    s->r->setProgress(1.0f, s->uploadSize, s->downloadSize);
 
     try
     {
@@ -537,15 +542,14 @@ struct Client::Private
         {
           uint64_t t = *total;
           uint64_t r = *remaining;
+          s->downloadSize = size_t(t);
           if(t>=r)
           {
             float f = 1.0f - float(r)/float(t);
-            s->r->setProgress(f);
+            s->r->setProgress(f, s->uploadSize, s->downloadSize);
           }
         }
       }
-
-      // tpDebug() << bytesTransferred << "   " << s->buffer.max_size();
 
       s->setTimeout(60);
 
@@ -577,7 +581,7 @@ struct Client::Private
       return s->r->fail(ec, "read");
 
     s->r->setCompleted();
-    s->r->setProgress(1.0f);
+    s->r->setProgress(1.0f, s->uploadSize, s->downloadSize);
 
     {
       boost::system::error_code ec;

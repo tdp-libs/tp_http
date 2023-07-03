@@ -12,7 +12,7 @@ struct Request::Private
   TP_REF_COUNT_OBJECTS("tp_http::Request::Private");
 
   std::weak_ptr<int> alive;
-  const std::function<void(float)> progressCallback;
+  const std::function<void(float, size_t, size_t)> progressCallback;
   const std::function<void(const Request&)> completionHandler;
 
   Protocol protocol{Protocol::HTTPS};
@@ -36,7 +36,7 @@ struct Request::Private
 
   //################################################################################################
   Private(const std::weak_ptr<int>& alive_,
-          const std::function<void(float)>& progressCallback_,
+          const std::function<void(float, size_t, size_t)>& progressCallback_,
           const std::function<void(const Request&)>& completionHandler_):
     alive(alive_),
     progressCallback(progressCallback_),
@@ -49,14 +49,14 @@ struct Request::Private
 //##################################################################################################
 Request::Request(const std::weak_ptr<int>& alive,
                  const std::function<void(const Request&)>& completionHandler):
-  d(new Private(alive, std::function<void(float)>(), completionHandler))
+  d(new Private(alive, std::function<void(float, size_t, size_t)>(), completionHandler))
 {
 
 }
 
 //##################################################################################################
 Request::Request(const std::weak_ptr<int>& alive,
-                 const std::function<void(float)>& progressCallback,
+                 const std::function<void(float, size_t, size_t)>& progressCallback,
                  const std::function<void(const Request&)>& completionHandler):
   d(new Private(alive, progressCallback, completionHandler))
 {
@@ -343,10 +343,10 @@ const std::string& Request::whatFailed() const
 }
 
 //##################################################################################################
-void Request::setProgress(float fraction)
+void Request::setProgress(float fraction, size_t uploadSize, size_t downloadSize)
 {
   if(d->progressCallback && !d->alive.expired())
-    d->progressCallback(fraction);
+    d->progressCallback(fraction, uploadSize, downloadSize);
 }
 
 }
