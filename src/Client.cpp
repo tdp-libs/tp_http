@@ -508,7 +508,7 @@ struct Client::Private
       else
         boost::beast::http::async_read(s->sslSocket, s->buffer, s->r->mutableParser(), handler);
 #else
-      s->setTimeout(60);
+      s->setTimeout(1000);
       auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
       {
         onReadSome(s, ec, bytesTransferred);
