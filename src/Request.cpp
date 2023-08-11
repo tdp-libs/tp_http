@@ -3,6 +3,8 @@
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/RefCount.h"
 
+#include <iostream>
+#include <sstream>
 namespace tp_http
 {
 
@@ -262,6 +264,39 @@ void Request::generateRequest()
     d->request.set(boost::beast::http::field::content_length,  std::to_string(encodedBody.size()));
     d->request.body() = encodedBody;
   }
+}
+
+//##################################################################################################
+std::string Request::toString()
+{
+  std::stringstream ss;
+  ss<<"\n--------------------------------- Request ---------------------------------"<<
+  "\n    Protocol: "<< (protocol() == tp_http::Protocol::HTTP ? "HTTP" : "HTTPS")<<
+  "\n    Verb: "<< verb()<<
+  "\n    Host: "<<host()<<
+  "\n    Endpoint: "<<endpoint()<<
+  "\n    Port: "<< port();
+
+  if(headerData().size())
+    ss<<"\n    -- Header data:";
+  for(auto &data : headerData())
+    ss<<"\n        Key: '"<<data.first<<"' Data: '"<<data.second<<"'";
+
+  if(formGetData().size())
+    ss<<"\n    -- Get query parameters:";
+  for(auto &data : formGetData())
+    ss<<"\n        Key: '"<<data.first<<"' Data: '"<<data.second<<"'";
+  
+  if(formPostData().size())
+    ss<<"\n    -- Post query parameters:";
+  for(auto &data : formPostData())
+    ss<<"\n        Key: '"<<data.first<<"' Data: '"<<data.second.data<<"'";
+
+  ss<<
+  "\n    ContentType: "<<contentType()<<
+  "\n    Body: "<<rawBodyData()<<
+  "\n---------------------------------------------------------------------------\n";
+  return ss.str();
 }
 
 //##################################################################################################

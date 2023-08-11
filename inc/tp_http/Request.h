@@ -124,6 +124,10 @@ public:
   void generateRequest();
 
   //################################################################################################
+  //! Serialise request for debugging.
+  std::string toString();
+
+  //################################################################################################
   //! The request to send to boost beast.
 #if BOOST_VERSION >= 107000
   const boost::beast::http::request<boost::beast::http::string_body>& request() const;
