@@ -128,7 +128,7 @@ struct Client::Private
   const size_t maxInFlight;
 
   std::shared_ptr<boost::asio::ssl::context> sslCtx;
-  boost::asio::io_context ioContext;
+  std::unique_ptr<boost::asio::io_context> ioContext;
   std::unique_ptr<boost::asio::io_context::work> work;
   std::vector<std::thread*> threads;
 
@@ -151,19 +151,20 @@ struct Client::Private
   Private(size_t maxInFlight_, size_t nThreads):
     maxInFlight(maxInFlight_),
     sslCtx(makeCTX()),
-    work(std::make_unique<boost::asio::io_context::work>(ioContext))
+    ioContext(std::make_unique<boost::asio::io_context>()),
+    work(std::make_unique<boost::asio::io_context::work>(*ioContext))
   {
     for(size_t i=0; i<nThreads; i++)
-      threads.push_back(new std::thread([&]{ioContext.run();}));
+      threads.push_back(new std::thread([&]{ioContext->run();}));
   }
 
   //################################################################################################
   ~Private()
   {
     work.reset();
-    ioContext.stop();
+    ioContext->stop();
     {
-      //The order here is important, we need to clear empty while messageQueueMutex is unlocked.
+      //The order here is important, we need to clear empty while requestQueueMutex is unlocked.
       std::deque<std::pair<Request*, uint32_t>> empty;
       {
         TP_MUTEX_LOCKER(requestQueueMutex);
@@ -179,6 +180,8 @@ struct Client::Private
       thread->join();
       delete thread;
     }
+
+    ioContext.reset();
   }
 
   //################################################################################################
@@ -230,7 +233,7 @@ struct Client::Private
 
     inFlight++;
 
-    auto s = std::make_shared<SocketDetails_lt>(ioContext, sslCtx, [&]
+    auto s = std::make_shared<SocketDetails_lt>(*ioContext, sslCtx, [&]
     {
       std::shared_ptr<SocketDetails_lt> s;
       TP_MUTEX_LOCKER(requestQueueMutex);
@@ -251,11 +254,12 @@ struct Client::Private
     try
     {
       // Look up the domain name
+      std::shared_ptr<SocketDetails_lt> ss = s;
       s->resolver.async_resolve(s->r->host(),
                                 std::to_string(s->r->port()),
-                                [this, s](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::results_type& results)
+                                [this, ss](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::results_type& results)
       {
-        onResolve(s, ec, results);
+        onResolve(ss, ec, results);
       });
     }
     catch(...)
@@ -279,23 +283,22 @@ struct Client::Private
 
     try
     {
+      std::shared_ptr<SocketDetails_lt> ss = s;
+
       boost::asio::async_connect(s->socket,
                                  results.begin(),
                                  results.end(),
-                                 [this, s](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::iterator& iterator)
+                                 [this, ss](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::iterator& iterator)
       {
         if(!ec)
         {
           const int timeout = 240 * 1000;
-          ::setsockopt(s->socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
-          ::setsockopt(s->socket.native_handle(), SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
-
-          //s->socket.set_option(boost::asio::ip::tcp::no_delay(true));
+          ::setsockopt(ss->socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
+          ::setsockopt(ss->socket.native_handle(), SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char *>(&timeout), sizeof timeout);
         }
 
-
-        s->clearTimeout();
-        onConnect(s, ec, iterator);
+        ss->clearTimeout();
+        onConnect(ss, ec, iterator);
       });
     }
     catch(...)
@@ -368,11 +371,12 @@ struct Client::Private
         });
 #endif
 
+        std::shared_ptr<SocketDetails_lt> ss = s;
         s->sslSocket.async_handshake(boost::asio::ssl::stream_base::client,
-                                     [this, s](const boost::system::error_code& ec)
+                                     [this, ss](const boost::system::error_code& ec)
         {
-          s->clearTimeout();
-          onHandshake(s, ec);
+          ss->clearTimeout();
+          onHandshake(ss, ec);
         });
       }
       catch(...)
@@ -406,7 +410,8 @@ struct Client::Private
 
     try
     {
-      auto handler = [this, s, totalSize, totalSent](const boost::system::error_code& ec, size_t bytesTransferred)
+      std::shared_ptr<SocketDetails_lt> ss = s;
+      auto handler = [this, ss, totalSize, totalSent](const boost::system::error_code& ec, size_t bytesTransferred)
       {
         recordBytesUploaded(bytesTransferred);
 
@@ -416,17 +421,17 @@ struct Client::Private
           float f = float(t) / float(totalSize);
           f*=0.4f;
           f+=0.2f;
-          s->r->setProgress(f, s->uploadSize, s->downloadSize);
+          ss->r->setProgress(f, ss->uploadSize, ss->downloadSize);
         }
 
-        if(s->serializer->is_done())
+        if(ss->serializer->is_done())
         {
-          s->clearTimeout();
-          onWrite(s, ec);
+          ss->clearTimeout();
+          onWrite(ss, ec);
         }
         else
         {
-          asyncWriteSome(s, totalSize, t, ec);
+          asyncWriteSome(ss, totalSize, t, ec);
         }
       };
 
@@ -459,11 +464,12 @@ struct Client::Private
 
       if(v && (*v)<524288)
       {
-        auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+        std::shared_ptr<SocketDetails_lt> ss = s;
+        auto handler = [this, ss](const boost::system::error_code& ec, size_t bytesTransferred)
         {
           recordBytesUploaded(bytesTransferred);
-          s->clearTimeout();
-          onWrite(s, ec);
+          ss->clearTimeout();
+          onWrite(ss, ec);
         };
 
         if(s->r->protocol() == Protocol::HTTP)
@@ -497,10 +503,11 @@ struct Client::Private
     {
 #if 0
       s->setTimeout(240);
-      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+      std::shared_ptr<SocketDetails_lt> ss = s;
+      auto handler = [this, ss](const boost::system::error_code& ec, size_t bytesTransferred)
       {
-        s->clearTimeout();
-        onRead(s, ec, bytesTransferred);
+        ss->clearTimeout();
+        onRead(ss, ec, bytesTransferred);
       };
 
       if(s->r->protocol() == Protocol::HTTP)
@@ -509,9 +516,10 @@ struct Client::Private
         boost::beast::http::async_read(s->sslSocket, s->buffer, s->r->mutableParser(), handler);
 #else
       s->setTimeout(1000);
-      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+      std::shared_ptr<SocketDetails_lt> ss = s;
+      auto handler = [this, ss](const boost::system::error_code& ec, size_t bytesTransferred)
       {
-        onReadSome(s, ec, bytesTransferred);
+        onReadSome(ss, ec, bytesTransferred);
       };
       if(s->r->protocol() == Protocol::HTTP)
         boost::beast::http::async_read_some(s->socket, s->buffer, s->r->mutableParser(), handler);
@@ -553,9 +561,10 @@ struct Client::Private
 
       s->setTimeout(60);
 
-      auto handler = [this, s](const boost::system::error_code& ec, size_t bytesTransferred)
+      std::shared_ptr<SocketDetails_lt> ss = s;
+      auto handler = [this, ss](const boost::system::error_code& ec, size_t bytesTransferred)
       {
-        onReadSome(s, ec, bytesTransferred);
+        onReadSome(ss, ec, bytesTransferred);
       };
 
       if(s->r->protocol() == Protocol::HTTP)
