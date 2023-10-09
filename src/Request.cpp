@@ -3,8 +3,13 @@
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/RefCount.h"
 
+#ifdef TP_HTTP_DEBUG
+#include "tp_utils/StackTrace.h"
+#endif
+
 #include <iostream>
 #include <sstream>
+
 namespace tp_http
 {
 
