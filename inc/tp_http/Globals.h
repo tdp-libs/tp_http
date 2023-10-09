@@ -67,16 +67,16 @@ struct PostData
 std::string urlEncode(const std::string& value);
 
 //##################################################################################################
-std::string jsonEncodedForm(const std::unordered_map<std::string, PostData>& formData);
+std::string jsonEncodedForm(const std::unordered_multimap<std::string, PostData>& formData);
 
 //##################################################################################################
-std::string urlEncodedForm(const std::unordered_map<std::string, PostData>& formData);
+std::string urlEncodedForm(const std::unordered_multimap<std::string, PostData>& formData);
 
 //##################################################################################################
-std::string urlEncodedForm(const std::unordered_map<std::string, std::string>& formData);
+std::string urlEncodedForm(const std::unordered_multimap<std::string, std::string>& formData);
 
 //##################################################################################################
-std::string multipartEncodedForm(const std::unordered_map<std::string, PostData>& formData, const std::string& boundary);
+std::string multipartEncodedForm(const std::unordered_multimap<std::string, PostData>& formData, const std::string& boundary);
 
 //##################################################################################################
 void addSSLVerifyPaths(boost::asio::ssl::context& sslCtx);

@@ -93,14 +93,14 @@ public:
   void addFormPostData(const std::string& key, const PostData& value);
 
   //################################################################################################
-  const std::unordered_map<std::string, PostData>& formPostData() const;
+  const std::unordered_multimap<std::string, PostData>& formPostData() const;
 
   //################################################################################################
   //! Add form data to be encoded on the end of the URL.
   void addFormGetData(const std::string& key, const std::string& value);
 
   //################################################################################################
-  const std::unordered_map<std::string, std::string>& formGetData() const;
+  const std::unordered_multimap<std::string, std::string>& formGetData() const;
 
   //################################################################################################
   //! Sets the raw body data, only relevant if BodyEncodeMode::Raw is used.

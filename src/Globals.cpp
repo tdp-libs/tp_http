@@ -82,7 +82,7 @@ std::string urlEncode(const std::string& value)
 }
 
 //##################################################################################################
-std::string jsonEncodedForm(const std::unordered_map<std::string, PostData>& formData)
+std::string jsonEncodedForm(const std::unordered_multimap<std::string, PostData>& formData)
 {
   nlohmann::json j;
 
@@ -93,7 +93,7 @@ std::string jsonEncodedForm(const std::unordered_map<std::string, PostData>& for
 }
 
 //##################################################################################################
-std::string urlEncodedForm(const std::unordered_map<std::string, PostData>& formData)
+std::string urlEncodedForm(const std::unordered_multimap<std::string, PostData>& formData)
 {
   size_t size{0};
   for(const auto& pair : formData)
@@ -113,7 +113,7 @@ std::string urlEncodedForm(const std::unordered_map<std::string, PostData>& form
 }
 
 //##################################################################################################
-std::string urlEncodedForm(const std::unordered_map<std::string, std::string>& formData)
+std::string urlEncodedForm(const std::unordered_multimap<std::string, std::string>& formData)
 {
   size_t size{0};
   for(const auto& pair : formData)
@@ -133,7 +133,7 @@ std::string urlEncodedForm(const std::unordered_map<std::string, std::string>& f
 }
 
 //##################################################################################################
-std::string multipartEncodedForm(const std::unordered_map<std::string, PostData>& formData, const std::string& boundary)
+std::string multipartEncodedForm(const std::unordered_multimap<std::string, PostData>& formData, const std::string& boundary)
 {
   size_t size{0};
   for(const auto& pair : formData)
