@@ -6,8 +6,13 @@
 #include "tp_utils/StackTrace.h"
 #endif
 
+#ifdef TP_HTTP_DEBUG
+#include "tp_utils/StackTrace.h"
+#endif
+
 #include <iostream>
 #include <sstream>
+
 namespace tp_http
 {
 
