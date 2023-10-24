@@ -31,7 +31,7 @@ struct Request::Private
   boost::beast::http::verb verb{boost::beast::http::verb::get};
   std::string endpoint;
   std::unordered_map<std::string, std::string> headerData;
-  std::unordered_multimap<std::string, PostData   > formPostData;
+  std::list<std::pair<std::string, PostData>> formPostData;
   std::unordered_multimap<std::string, std::string> formGetData;
   std::string rawBodyData;
   std::string contentType;
@@ -169,11 +169,11 @@ const std::unordered_map<std::string, std::string>& Request::headerData() const
 //##################################################################################################
 void Request::addFormPostData(const std::string& key, const PostData& value)
 {
-  d->formPostData.insert({key, value});
+  d->formPostData.emplace_back(std::pair<std::string, PostData>(key, value));
 }
 
 //##################################################################################################
-const std::unordered_multimap<std::string, PostData>& Request::formPostData() const
+const std::list<std::pair<std::string, PostData>>& Request::formPostData() const
 {
   return d->formPostData;
 }

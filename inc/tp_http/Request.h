@@ -93,7 +93,7 @@ public:
   void addFormPostData(const std::string& key, const PostData& value);
 
   //################################################################################################
-  const std::unordered_multimap<std::string, PostData>& formPostData() const;
+  const std::list<std::pair<std::string, PostData>>& formPostData() const;
 
   //################################################################################################
   //! Add form data to be encoded on the end of the URL.
