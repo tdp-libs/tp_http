@@ -288,17 +288,17 @@ std::string Request::toString()
   if(headerData().size())
     ss<<"\n    -- Header data:";
   for(auto &data : headerData())
-    ss<<"\n        Key: '"<<data.first<<"' Data: '"<<data.second<<"'";
+    ss<<"\n        '"<<data.first<<"':'"<<data.second<<"'";
 
   if(formGetData().size())
     ss<<"\n    -- Get query parameters:";
   for(auto &data : formGetData())
-    ss<<"\n        Key: '"<<data.first<<"' Data: '"<<data.second<<"'";
+    ss<<"\n        '"<<data.first<<"':'"<<data.second<<"'";
   
   if(formPostData().size())
     ss<<"\n    -- Post query parameters:";
   for(auto &data : formPostData())
-    ss<<"\n        Key: '"<<data.first<<"' Data: '"<<data.second.data<<"'";
+    ss<<"\n        '"<<data.first<<"':'"<<data.second.data<<"'";
 
   ss<<
   "\n    ContentType: "<<contentType()<<
