@@ -626,7 +626,6 @@ Client::~Client()
 void Client::sendRequest(Request* request, Priority priority)
 {
   request->setAddedToClient();
-  std::shared_ptr<SocketDetails_lt> s;
   TP_MUTEX_LOCKER(d->requestQueueMutex);
 
   uint32_t p = d->priorityMultiplier * uint32_t(priority);
@@ -653,7 +652,7 @@ void Client::sendRequest(Request* request, Priority priority)
     d->requestQueue.emplace(i, tmp);
   }
 
-  s = d->postNext();
+  d->postNext();
 }
 
 //##################################################################################################
