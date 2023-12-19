@@ -238,6 +238,8 @@ struct Client::Private
       std::shared_ptr<SocketDetails_lt> s;
       TP_MUTEX_LOCKER(requestQueueMutex);
       inFlight--;
+
+      // Assigning to s is important don't remove it.
       s = postNext();
     });
     s->r = requestQueue.front().first;
@@ -626,6 +628,7 @@ Client::~Client()
 void Client::sendRequest(Request* request, Priority priority)
 {
   request->setAddedToClient();
+  std::shared_ptr<SocketDetails_lt> s;
   TP_MUTEX_LOCKER(d->requestQueueMutex);
 
   uint32_t p = d->priorityMultiplier * uint32_t(priority);
@@ -652,7 +655,8 @@ void Client::sendRequest(Request* request, Priority priority)
     d->requestQueue.emplace(i, tmp);
   }
 
-  d->postNext();
+  // Assigning to s is important don't remove it.
+  s = d->postNext();
 }
 
 //##################################################################################################
