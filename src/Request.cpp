@@ -95,6 +95,18 @@ Request::~Request()
 }
 
 //##################################################################################################
+Request* Request::makeClone() const
+{
+  Request* cloneRequest = new Request(d->alive, d->progressCallback, d->completionHandler);
+  cloneRequest->d->verb     = d->verb;
+  cloneRequest->d->protocol = d->protocol;
+  cloneRequest->d->host     = d->host;
+  cloneRequest->d->endpoint = d->endpoint;
+  cloneRequest->d->headerData = d->headerData;
+  return cloneRequest;
+}
+
+//##################################################################################################
 void Request::setProtocol(Protocol protocol)
 {
   d->protocol = protocol;
