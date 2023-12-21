@@ -253,6 +253,14 @@ struct Client::Private
   // Start the asynchronous http request
   void run(const std::shared_ptr<SocketDetails_lt>& s)
   {
+    if(s->r->resolverResults())
+    {
+      std::shared_ptr<SocketDetails_lt> ss = s;
+      boost::system::error_code ec;
+      onResolve(ss, ec, *s->r->resolverResults());
+      return;
+    }
+
     try
     {
       // Look up the domain name
@@ -282,6 +290,8 @@ struct Client::Private
 
     s->setTimeout(30);
     s->r->setProgress(0.05f, 0, 0);
+
+    s->r->setResolverResults(results);
 
     try
     {

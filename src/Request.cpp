@@ -36,6 +36,7 @@ struct Request::Private
   std::string rawBodyData;
   std::string contentType;
   BodyEncodeMode bodyEncodeMode{BodyEncodeMode::URL};
+  std::optional<boost::asio::ip::tcp::resolver::results_type> resolverResults;
 
   boost::beast::http::request<boost::beast::http::string_body> request;
   boost::beast::http::response_parser<boost::beast::http::string_body> parser;
@@ -98,11 +99,12 @@ Request::~Request()
 Request* Request::makeClone() const
 {
   Request* cloneRequest = new Request(d->alive, d->progressCallback, d->completionHandler);
-  cloneRequest->d->verb     = d->verb;
-  cloneRequest->d->protocol = d->protocol;
-  cloneRequest->d->host     = d->host;
-  cloneRequest->d->endpoint = d->endpoint;
-  cloneRequest->d->headerData = d->headerData;
+  cloneRequest->d->verb            = d->verb;
+  cloneRequest->d->protocol        = d->protocol;
+  cloneRequest->d->host            = d->host;
+  cloneRequest->d->endpoint        = d->endpoint;
+  cloneRequest->d->resolverResults = d->resolverResults;
+  cloneRequest->d->headerData      = d->headerData;
   return cloneRequest;
 }
 
@@ -231,6 +233,18 @@ void Request::setBodyEncodeMode(BodyEncodeMode bodyEncodeMode)
 BodyEncodeMode Request::bodyEncodeMode() const
 {
   return d->bodyEncodeMode;
+}
+
+//##################################################################################################
+const std::optional<boost::asio::ip::tcp::resolver::results_type>& Request::resolverResults() const
+{
+  return d->resolverResults;
+}
+
+//##################################################################################################
+void Request::setResolverResults(const boost::asio::ip::tcp::resolver::results_type& resolverResults)
+{
+  d->resolverResults = resolverResults;
 }
 
 //##################################################################################################

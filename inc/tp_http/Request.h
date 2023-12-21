@@ -4,8 +4,10 @@
 #include "tp_http/Globals.h"
 
 #include <boost/beast/http.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include <functional>
+#include <optional>
 
 namespace tp_utils
 {
@@ -33,6 +35,7 @@ public:
   //################################################################################################
   ~Request();
 
+  //################################################################################################
   Request* makeClone() const;
 
   //################################################################################################
@@ -120,6 +123,13 @@ public:
 
   //################################################################################################
   BodyEncodeMode bodyEncodeMode() const;
+
+  //################################################################################################
+  const std::optional<boost::asio::ip::tcp::resolver::results_type>& resolverResults() const;
+
+  //################################################################################################
+  void setResolverResults(const boost::asio::ip::tcp::resolver::results_type& resolverResults);
+
 
   //################################################################################################
   //! Call this once to populate the request structure.
