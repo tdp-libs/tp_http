@@ -7,6 +7,8 @@
 #include "tp_utils/TimeUtils.h"
 #include "tp_utils/TimerThread.h"
 
+#include "lib_platform/SetThreadName.h"
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
@@ -155,7 +157,11 @@ struct Client::Private
     work(std::make_unique<boost::asio::io_context::work>(*ioContext))
   {
     for(size_t i=0; i<nThreads; i++)
-      threads.push_back(new std::thread([&]{ioContext->run();}));
+      threads.push_back(new std::thread([&]
+      {
+        lib_platform::setThreadName("Client");
+        ioContext->run();
+      }));
   }
 
   //################################################################################################
@@ -198,7 +204,7 @@ struct Client::Private
 
     bytesDownloaded = 0;
     bytesUploaded = 0;
-  }, 1000);
+  }, 1000, "updateStatsThread");
 
   //################################################################################################
   static std::shared_ptr<boost::asio::ssl::context> makeCTX()
