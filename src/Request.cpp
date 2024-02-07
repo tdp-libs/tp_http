@@ -382,6 +382,12 @@ void Request::fail(const boost::system::error_code& ec, const std::string& whatF
 }
 
 //##################################################################################################
+void Request::fail(const std::string& whatFailed)
+{
+  d->whatFailed = whatFailed;
+}
+
+//##################################################################################################
 void Request::setCompleted()
 {
   d->completed = true;
