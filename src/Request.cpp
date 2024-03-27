@@ -109,6 +109,19 @@ Request* Request::makeClone() const
 }
 
 //##################################################################################################
+Request* Request::makeDeadClone() const
+{
+  Request* cloneRequest = new Request({}, [](const Request&){});
+  cloneRequest->d->verb            = d->verb;
+  cloneRequest->d->protocol        = d->protocol;
+  cloneRequest->d->host            = d->host;
+  cloneRequest->d->endpoint        = d->endpoint;
+  cloneRequest->d->resolverResults = d->resolverResults;
+  cloneRequest->d->headerData      = d->headerData;
+  return cloneRequest;
+}
+
+//##################################################################################################
 void Request::setProtocol(Protocol protocol)
 {
   d->protocol = protocol;
@@ -301,7 +314,7 @@ void Request::generateRequest()
 }
 
 //##################################################################################################
-std::string Request::toString()
+std::string Request::toString() const
 {
   std::stringstream ss;
   ss<<"\n--------------------------------- Request ---------------------------------"<<

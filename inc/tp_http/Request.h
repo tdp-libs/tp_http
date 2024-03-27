@@ -22,6 +22,7 @@ namespace tp_http
 class Request
 {
   TP_NONCOPYABLE(Request);
+  TP_DQ;
 public:
   //################################################################################################
   Request(const std::weak_ptr<int>& alive,
@@ -37,6 +38,9 @@ public:
 
   //################################################################################################
   Request* makeClone() const;
+
+  //################################################################################################
+  Request* makeDeadClone() const;
 
   //################################################################################################
   //! Select between HTTP and HTTPS.
@@ -137,7 +141,7 @@ public:
 
   //################################################################################################
   //! Serialise request for debugging.
-  std::string toString();
+  std::string toString() const;
 
   //################################################################################################
   //! The request to send to boost beast.
@@ -184,11 +188,6 @@ public:
 
   //################################################################################################
   void setProgress(float fraction, size_t uploadSize, size_t downloadSize);
-
-private:
-  struct Private;
-  friend struct Private;
-  Private* d;
 };
 
 }
