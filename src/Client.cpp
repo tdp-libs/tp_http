@@ -195,6 +195,10 @@ struct Client::Private
   {
     TP_MUTEX_LOCKER(statsMutex);
 
+#ifdef TP_LINUX
+#warning Make this an async timer.
+#endif
+
     int64_t now = tp_utils::currentTimeMS();
     int64_t delta = now - lastStatsUpdate;
     lastStatsUpdate = now;
