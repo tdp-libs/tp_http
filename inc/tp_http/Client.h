@@ -3,6 +3,8 @@
 
 #include "tp_http/Globals.h"
 
+#include <boost/asio/io_context.hpp>
+
 namespace tp_http
 {
 
@@ -21,6 +23,7 @@ enum class Priority : uint32_t
 class Client
 {
   TP_NONCOPYABLE(Client);
+  TP_DQ;
 public:
   //################################################################################################
   Client(size_t maxInFlight=4, size_t nThreads=1);
@@ -46,10 +49,8 @@ public:
   //################################################################################################
   size_t bpsUploaded() const;
 
-private:
-  struct Private;
-  friend struct Private;
-  Private* d;
+  //################################################################################################
+  boost::asio::io_context* ioc();
 };
 
 }

@@ -1,11 +1,11 @@
 ﻿#include "tp_http/Client.h"
 #include "tp_http/Request.h"
+#include "tp_http/AsyncTimer.h"
 
 #include "tp_utils/MutexUtils.h"
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/RefCount.h"
 #include "tp_utils/TimeUtils.h"
-#include "tp_utils/TimerThread.h"
 
 #include "lib_platform/SetThreadName.h"
 
@@ -187,17 +187,13 @@ struct Client::Private
       delete thread;
     }
 
-    ioContext.reset();
+    //ioContext.reset();
   }
 
   //################################################################################################
-  tp_utils::TimerThread updateStatsThread = tp_utils::TimerThread([&]
+  AsyncTimer updateStatsThread = AsyncTimer([&]
   {
     TP_MUTEX_LOCKER(statsMutex);
-
-#ifdef TP_LINUX
-#warning Make this an async timer.
-#endif
 
     int64_t now = tp_utils::currentTimeMS();
     int64_t delta = now - lastStatsUpdate;
@@ -208,7 +204,7 @@ struct Client::Private
 
     bytesDownloaded = 0;
     bytesUploaded = 0;
-  }, 1000, "updateStatsThread");
+  }, 1000, ioContext.get());
 
   //################################################################################################
   static std::shared_ptr<boost::asio::ssl::context> makeCTX()
@@ -705,6 +701,12 @@ size_t Client::bpsUploaded() const
 {
   TP_MUTEX_LOCKER(d->statsMutex);
   return d->bpsUploaded;
+}
+
+//##################################################################################################
+boost::asio::io_context* Client::ioc()
+{
+  return d->ioContext.get();
 }
 
 }

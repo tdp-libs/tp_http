@@ -11,3 +11,6 @@ HEADERS += inc/tp_http/Client.h
 
 SOURCES += src/Request.cpp
 HEADERS += inc/tp_http/Request.h
+
+SOURCES += src/AsyncTimer.cpp
+HEADERS += inc/tp_http/AsyncTimer.h

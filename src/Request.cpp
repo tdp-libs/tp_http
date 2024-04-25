@@ -339,6 +339,10 @@ std::string Request::toString() const
   for(auto &data : formPostData())
     ss<<"\n        '"<<data.first<<"':'"<<data.second.data<<"'";
 
+  ss<<"\n    -- Request values:";
+  for(const auto& i : d->request)
+    ss <<  "\n        '" << i.name_string()<<"':'"<<i.value();
+
   ss<<
   "\n    ContentType: "<<contentType()<<
   "\n    Body: "<<rawBodyData()<<
