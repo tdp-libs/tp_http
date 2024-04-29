@@ -1,4 +1,5 @@
 #include "tp_http/Request.h"
+#include "tp_http/ResolverResults.h"
 
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/RefCount.h"
@@ -36,7 +37,7 @@ struct Request::Private
   std::string rawBodyData;
   std::string contentType;
   BodyEncodeMode bodyEncodeMode{BodyEncodeMode::URL};
-  std::optional<boost::asio::ip::tcp::resolver::results_type> resolverResults;
+  std::shared_ptr<ResolverResults> resolverResults;
 
   boost::beast::http::request<boost::beast::http::string_body> request;
   boost::beast::http::response_parser<boost::beast::http::string_body> parser;
@@ -249,13 +250,13 @@ BodyEncodeMode Request::bodyEncodeMode() const
 }
 
 //##################################################################################################
-const std::optional<boost::asio::ip::tcp::resolver::results_type>& Request::resolverResults() const
+const std::shared_ptr<ResolverResults>& Request::resolverResults() const
 {
   return d->resolverResults;
 }
 
 //##################################################################################################
-void Request::setResolverResults(const boost::asio::ip::tcp::resolver::results_type& resolverResults)
+void Request::setResolverResults(const std::shared_ptr<ResolverResults>& resolverResults)
 {
   d->resolverResults = resolverResults;
 }

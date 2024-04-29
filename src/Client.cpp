@@ -1,5 +1,6 @@
 ﻿#include "tp_http/Client.h"
 #include "tp_http/Request.h"
+#include "tp_http/ResolverResults.h"
 #include "tp_http/AsyncTimer.h"
 
 #include "tp_utils/MutexUtils.h"
@@ -263,7 +264,7 @@ struct Client::Private
     {
       std::shared_ptr<SocketDetails_lt> ss = s;
       boost::system::error_code ec;
-      onResolve(ss, ec, *s->r->resolverResults());
+      onResolve(ss, ec, s->r->resolverResults()->resolverResults);
       return;
     }
 
@@ -297,7 +298,9 @@ struct Client::Private
     s->setTimeout(30);
     s->r->setProgress(0.05f, 0, 0);
 
-    s->r->setResolverResults(results);
+    auto resolverResults = std::make_shared<ResolverResults>();
+    resolverResults->resolverResults = results;
+    s->r->setResolverResults(resolverResults);
 
     try
     {

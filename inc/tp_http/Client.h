@@ -1,7 +1,7 @@
 #ifndef tp_http_Client_h
 #define tp_http_Client_h
 
-#include "tp_http/Globals.h"
+#include "tp_http/Globals.h" // IWYU pragma: keep
 
 #include <boost/asio/io_context.hpp>
 

@@ -3,19 +3,16 @@
 
 #include "tp_http/Globals.h"
 
-#include <boost/beast/http.hpp>
-#include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/http/verb.hpp>
+#include <boost/beast/http/message.hpp>
+#include <boost/beast/http/string_body.hpp>
+#include <boost/beast/http/parser.hpp>
 
 #include <functional>
-#include <optional>
-
-namespace tp_utils
-{
-
-}
 
 namespace tp_http
 {
+struct ResolverResults;
 
 //##################################################################################################
 //! New up one of these for each request.
@@ -129,10 +126,11 @@ public:
   BodyEncodeMode bodyEncodeMode() const;
 
   //################################################################################################
-  const std::optional<boost::asio::ip::tcp::resolver::results_type>& resolverResults() const;
+  // May return null
+  const std::shared_ptr<ResolverResults>& resolverResults() const;
 
   //################################################################################################
-  void setResolverResults(const boost::asio::ip::tcp::resolver::results_type& resolverResults);
+  void setResolverResults(const std::shared_ptr<ResolverResults>& resolverResults);
 
 
   //################################################################################################
