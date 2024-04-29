@@ -275,8 +275,12 @@ struct Client::Private
       s->resolver.async_resolve(s->r->host(),
                                 std::to_string(s->r->port()),
                                 [this, ss](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::results_type& results)
-      {
-        onResolve(ss, ec, results);
+      {        
+        auto resolverResults = std::make_shared<ResolverResults>();
+        resolverResults->resolverResults = results;
+        ss->r->setResolverResults(resolverResults);
+
+        onResolve(ss, ec, ss->r->resolverResults()->resolverResults);
       });
     }
     catch(...)
@@ -297,10 +301,6 @@ struct Client::Private
 
     s->setTimeout(30);
     s->r->setProgress(0.05f, 0, 0);
-
-    auto resolverResults = std::make_shared<ResolverResults>();
-    resolverResults->resolverResults = results;
-    s->r->setResolverResults(resolverResults);
 
     try
     {
