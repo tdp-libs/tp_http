@@ -29,10 +29,10 @@ std::string protocolToString(Protocol protocol)
 {
   switch(protocol)
   {
-  case Protocol::HTTP: return "HTTP";
-  case Protocol::HTTPS: return "HTTPS";
+    case Protocol::HTTP: return "HTTP";
+    case Protocol::HTTPS: return "HTTPS";
   }
-   return "HTTP";
+  return "HTTP";
 }
 
 //##################################################################################################
@@ -170,9 +170,8 @@ namespace
 void add_windows_root_certs(boost::asio::ssl::context &sslCtx)
 {
   HCERTSTORE hStore = CertOpenSystemStore(0, _T("ROOT"));
-  if (hStore == nullptr) {
+  if(hStore == nullptr)
     return;
-  }
 
   X509_STORE *store = X509_STORE_new();
   PCCERT_CONTEXT pContext = nullptr;
