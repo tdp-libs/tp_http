@@ -318,6 +318,7 @@ void Request::generateRequest()
 std::string Request::toString() const
 {
   std::stringstream ss;
+#ifndef ALEX_BLINOV_DEBUG
   ss<<"\n--------------------------------- Request ---------------------------------"<<
   "\n    Protocol: "<< (protocol() == tp_http::Protocol::HTTP ? "HTTP" : "HTTPS")<<
   "\n    Verb: "<< verb()<<
@@ -348,6 +349,7 @@ std::string Request::toString() const
   "\n    ContentType: "<<contentType()<<
   "\n    Body: "<<rawBodyData()<<
   "\n---------------------------------------------------------------------------\n";
+#endif
   return ss.str();
 }
 
