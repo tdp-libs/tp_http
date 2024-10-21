@@ -142,6 +142,10 @@ struct Client::Private
   std::deque<std::pair<Request*, uint32_t>> requestQueue;
   size_t inFlight{0};
 
+  bool useDNSCache{true};
+  TPMutex dnsCacheMutex{TPM};
+  std::map<std::string, boost::asio::ip::tcp::resolver::results_type> dnsCache;
+
   TPMutex statsMutex{TPM};
   size_t bytesDownloaded{0};
   size_t bytesUploaded{0};
@@ -268,6 +272,28 @@ struct Client::Private
       return;
     }
 
+    if(useDNSCache)
+    {
+      boost::asio::ip::tcp::resolver::results_type results;
+      {
+        TP_MUTEX_LOCKER(dnsCacheMutex);
+        if(auto i=dnsCache.find(s->r->dnsKey()); i!=dnsCache.end())
+          results = i->second;
+      }
+
+      if(!results.empty())
+      {
+        std::shared_ptr<SocketDetails_lt> ss = s;
+
+        auto resolverResults = std::make_shared<ResolverResults>();
+        resolverResults->resolverResults = results;
+        ss->r->setResolverResults(resolverResults);
+        boost::system::error_code ec;
+        onResolve(ss, ec, ss->r->resolverResults()->resolverResults);
+        return;
+      }
+    }
+
     try
     {
       // Look up the domain name
@@ -275,7 +301,13 @@ struct Client::Private
       s->resolver.async_resolve(s->r->host(),
                                 std::to_string(s->r->port()),
                                 [this, ss](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::results_type& results)
-      {        
+      {
+        if(useDNSCache)
+        {
+          TP_MUTEX_LOCKER(dnsCacheMutex);
+          dnsCache[ss->r->dnsKey()] = results;
+        }
+
         auto resolverResults = std::make_shared<ResolverResults>();
         resolverResults->resolverResults = results;
         ss->r->setResolverResults(resolverResults);

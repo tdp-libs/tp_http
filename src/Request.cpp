@@ -159,6 +159,12 @@ uint16_t Request::port() const
 }
 
 //##################################################################################################
+std::string Request::dnsKey() const
+{
+  return d->host + ':' + std::to_string(port());
+}
+
+//##################################################################################################
 void Request::setVerb(boost::beast::http::verb verb)
 {
   d->verb = verb;
