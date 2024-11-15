@@ -15,6 +15,15 @@ namespace tp_http
 struct ResolverResults;
 
 //##################################################################################################
+struct FakeAFailure
+{
+  std::string whatFailed;
+  std::string body;
+  int code{503};
+  bool completed{true};
+};
+
+//##################################################################################################
 //! New up one of these for each request.
 class Request
 {
@@ -189,6 +198,12 @@ public:
 
   //################################################################################################
   void setProgress(float fraction, size_t uploadSize, size_t downloadSize);
+
+  //################################################################################################
+  void setFakeAFailure(const FakeAFailure& fakeAFailure);
+
+  //################################################################################################
+  const std::unique_ptr<FakeAFailure>& fakeAFailure() const;
 };
 
 }

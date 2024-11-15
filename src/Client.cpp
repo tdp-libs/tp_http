@@ -264,6 +264,18 @@ struct Client::Private
   // Start the asynchronous http request
   void run(const std::shared_ptr<SocketDetails_lt>& s)
   {
+    if(const auto& fakeAFailure=s->r->fakeAFailure(); fakeAFailure)
+    {
+      s->r->mutableResult().body() = fakeAFailure->body;
+      s->r->mutableResult().result(fakeAFailure->code);
+
+      if(fakeAFailure->completed)
+        s->r->setCompleted();
+
+      boost::system::error_code ec;
+      return s->r->fail(ec, fakeAFailure->whatFailed);
+    }
+
     if(s->r->resolverResults())
     {
       std::shared_ptr<SocketDetails_lt> ss = s;

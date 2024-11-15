@@ -42,6 +42,8 @@ struct Request::Private
   boost::beast::http::request<boost::beast::http::string_body> request;
   boost::beast::http::response_parser<boost::beast::http::string_body> parser;
 
+  std::unique_ptr<FakeAFailure> fakeAFailure;
+
   std::string whatFailed;
   bool completed{false};
   bool addedToClient{false};
@@ -448,6 +450,18 @@ void Request::setProgress(float fraction, size_t uploadSize, size_t downloadSize
 {
   if(d->progressCallback && !d->alive.expired())
     d->progressCallback(fraction, uploadSize, downloadSize);
+}
+
+//##################################################################################################
+void Request::setFakeAFailure(const FakeAFailure& fakeAFailure)
+{
+  d->fakeAFailure.reset(new FakeAFailure(fakeAFailure));
+}
+
+//##################################################################################################
+const std::unique_ptr<FakeAFailure>& Request::fakeAFailure() const
+{
+  return d->fakeAFailure;
 }
 
 }
