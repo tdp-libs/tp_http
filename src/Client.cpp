@@ -90,18 +90,6 @@ struct SocketDetails_lt
   }
 
   //################################################################################################
-  void checkTimeout()
-  {
-    if(deadlineTimer.expires_at() <= boost::asio::deadline_timer::traits_type::now())
-    {
-      tpWarning() << "Timeout reached.....";
-      boost::system::error_code ec;
-      r->fail(ec, "Timeout reached.....");
-      socket.close();
-    }
-  }
-
-  //################################################################################################
   void setTimeout(int timeout)
   {
     deadlineTimer.expires_from_now(boost::posix_time::seconds(timeout));
@@ -110,7 +98,27 @@ struct SocketDetails_lt
     {
       std::lock_guard<std::mutex> lock(handle->mutex);(void)lock;
       if(handle->s && !ec)
-        checkTimeout();
+      {
+        if(deadlineTimer.expires_at() <= boost::asio::deadline_timer::traits_type::now())
+        {
+          tpWarning() << "Timeout reached.....";
+          boost::system::error_code ec;
+          r->fail(ec, "Timeout reached.....");
+
+          if(socket.is_open())
+          {
+            try
+            {
+              handle->s = nullptr;
+              socket.close();
+            }
+            catch(...)
+            {
+
+            }
+          }
+        }
+      }
     });
   }
 
