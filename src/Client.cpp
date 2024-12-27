@@ -102,15 +102,14 @@ struct SocketDetails_lt
         if(deadlineTimer.expires_at() <= boost::asio::deadline_timer::traits_type::now())
         {
           tpWarning() << "Timeout reached.....";
-          boost::system::error_code ec;
-          r->fail(ec, "Timeout reached.....");
+          r->fail("Timeout reached.....");
 
           if(socket.is_open())
           {
             try
             {
               handle->s = nullptr;
-              socket.close();
+              socket.cancel();
             }
             catch(...)
             {
@@ -199,8 +198,6 @@ struct Client::Private
       thread->join();
       delete thread;
     }
-
-    //ioContext.reset();
   }
 
   //################################################################################################
