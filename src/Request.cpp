@@ -93,7 +93,8 @@ Request::~Request()
                  ", result: " << int(d->parser.get().result()) << ")";
 #endif
 
-  if(!d->alive.expired())
+
+  if(auto lock = d->alive.lock(); lock)
     d->completionHandler(*this);
   delete d;
 }
