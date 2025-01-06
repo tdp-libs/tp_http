@@ -167,7 +167,7 @@ std::string multipartEncodedForm(const std::list<std::pair<std::string, PostData
 namespace
 {
 // https://stackoverflow.com/questions/39772878/reliable-way-to-get-root-ca-certificates-on-windows
-void add_windows_root_certs(boost::asio::ssl::context &sslCtx)
+void add_windows_root_certs(boost::asio::ssl::context& sslCtx)
 {
   HCERTSTORE hStore = CertOpenSystemStore(0, _T("ROOT"));
   if(hStore == nullptr)
@@ -175,7 +175,8 @@ void add_windows_root_certs(boost::asio::ssl::context &sslCtx)
 
   X509_STORE *store = X509_STORE_new();
   PCCERT_CONTEXT pContext = nullptr;
-  while ((pContext = CertEnumCertificatesInStore(hStore, pContext)) != nullptr) {
+  while ((pContext = CertEnumCertificatesInStore(hStore, pContext)) != nullptr)
+  {
     X509 *x509 = d2i_X509(nullptr,
                           reinterpret_cast<const unsigned char **>(const_cast<const BYTE**>(&pContext->pbCertEncoded)),
                           long(pContext->cbCertEncoded));
