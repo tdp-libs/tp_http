@@ -139,7 +139,7 @@ struct Client::Private
 
   std::shared_ptr<boost::asio::ssl::context> sslCtx;
   std::unique_ptr<boost::asio::io_context> ioContext;
-  std::unique_ptr<boost::asio::io_context::work> work;
+  boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work;
   std::vector<std::thread*> threads;
 
   uint32_t priorityMultiplier{10};
@@ -166,7 +166,7 @@ struct Client::Private
     maxInFlight(maxInFlight_),
     sslCtx(makeCTX()),
     ioContext(std::make_unique<boost::asio::io_context>()),
-    work(std::make_unique<boost::asio::io_context::work>(*ioContext))
+    work(boost::asio::make_work_guard(*ioContext))
   {
     for(size_t i=0; i<nThreads; i++)
       threads.push_back(new std::thread([&]
@@ -356,9 +356,8 @@ struct Client::Private
       std::shared_ptr<SocketDetails_lt> ss = s;
 
       boost::asio::async_connect(s->socket,
-                                 results.begin(),
-                                 results.end(),
-                                 [this, ss](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::iterator& iterator)
+                                 results,
+                                 [this, ss](const boost::system::error_code& ec, const boost::asio::ip::tcp::resolver::endpoint_type& iterator)
       {
         if(!ec)
         {
@@ -381,7 +380,7 @@ struct Client::Private
   // Send the HTTP request or HTTPS handshake to the remote host.
   void onConnect(const std::shared_ptr<SocketDetails_lt>& s,
                  const boost::system::error_code& ec,
-                 const boost::asio::ip::tcp::resolver::iterator& iterator)
+                 const boost::asio::ip::tcp::resolver::endpoint_type& iterator)
   {
     (void)iterator;
 
