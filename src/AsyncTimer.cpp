@@ -72,12 +72,11 @@ AsyncTimer::AsyncTimer(const std::function<void()>& callback, int64_t timeoutMS,
 //##################################################################################################
 AsyncTimer::~AsyncTimer()
 {
-  d->timer.cancel();
-
+  d->alive->mutex.locked([this]
   {
-    TP_MUTEX_LOCKER(d->alive->mutex);
+    d->timer.cancel();
     d->alive->alive=false;
-  }
+  });
 
   d->alive.reset();
 

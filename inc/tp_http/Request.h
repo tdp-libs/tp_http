@@ -24,6 +24,30 @@ struct FakeAFailure
 };
 
 //##################################################################################################
+enum class FailedReason
+{
+  None,
+  Fake,
+  ResolverException,
+  Resolver,
+  ConnectTimeout,
+  ConnectException,
+  Connect,
+  SSLTimeout,
+  SSL,
+  SSLException,
+  WriteTimeout,
+  WriteException,
+  Write,
+  ReadTimeout,
+  ReadException,
+  Read,
+  ShutdownException,
+  Shutdown,
+  Other
+};
+
+//##################################################################################################
 //! New up one of these for each request.
 class Request
 {
@@ -43,10 +67,20 @@ public:
   ~Request();
 
   //################################################################################################
+  //! Set the function used to decide if we should retry a request when it fails.
+  void setShouldRetry(const std::function<bool(Request&)>& shouldRetry);
+
+  //################################################################################################
+  bool shouldRetry();
+
+  //################################################################################################
   Request* makeClone() const;
 
   //################################################################################################
   Request* makeDeadClone() const;
+
+  //################################################################################################
+  Request* makeRetryClone();
 
   //################################################################################################
   //! Select between HTTP and HTTPS.
@@ -175,10 +209,10 @@ public:
   boost::beast::http::response_parser<boost::beast::http::string_body>& mutableParser();
 
   //################################################################################################
-  void fail(const boost::system::error_code& ec, const std::string& whatFailed);
+  void fail(const boost::system::error_code& ec, FailedReason failedReason, const std::string& whatFailed);
 
   //################################################################################################
-  void fail(const std::string& whatFailed);
+  void fail(FailedReason failedReason, const std::string& whatFailed);
 
   //################################################################################################
   void setCompleted();
@@ -195,6 +229,9 @@ public:
 
   //################################################################################################
   const std::string& whatFailed() const;
+
+  //################################################################################################
+  FailedReason failedReason() const;
 
   //################################################################################################
   void setProgress(float fraction, size_t uploadSize, size_t downloadSize);

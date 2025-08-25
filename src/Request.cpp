@@ -3,9 +3,7 @@
 
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/RefCount.h"
-#ifdef TP_HTTP_DEBUG
-#include "tp_utils/StackTrace.h"
-#endif
+#include "tp_utils/BinaryUtils.h"
 
 #ifdef TP_HTTP_DEBUG
 #include "tp_utils/StackTrace.h"
@@ -23,8 +21,10 @@ struct Request::Private
   TP_REF_COUNT_OBJECTS("tp_http::Request::Private");
 
   std::weak_ptr<int> alive;
-  const std::function<void(float, size_t, size_t)> progressCallback;
-  const std::function<void(const Request&)> completionHandler;
+  std::function<void(float, size_t, size_t)> progressCallback;
+  std::function<void(const Request&)> completionHandler;
+
+  std::function<bool(Request&)> shouldRetry;
 
   Protocol protocol{Protocol::HTTPS};
   std::string host;
@@ -45,6 +45,7 @@ struct Request::Private
   std::unique_ptr<FakeAFailure> fakeAFailure;
 
   std::string whatFailed;
+  FailedReason failedReason{FailedReason::None};
   bool completed{false};
   bool addedToClient{false};
 
@@ -100,15 +101,31 @@ Request::~Request()
 }
 
 //##################################################################################################
+void Request::setShouldRetry(const std::function<bool(Request&)>& shouldRetry)
+{
+  d->shouldRetry = shouldRetry;
+}
+
+//##################################################################################################
+bool Request::shouldRetry()
+{
+  return d->shouldRetry && d->shouldRetry(*this);
+}
+
+//##################################################################################################
 Request* Request::makeClone() const
 {
   Request* cloneRequest = new Request(d->alive, d->progressCallback, d->completionHandler);
-  cloneRequest->d->verb            = d->verb;
+  cloneRequest->d->shouldRetry     = d->shouldRetry;
   cloneRequest->d->protocol        = d->protocol;
   cloneRequest->d->host            = d->host;
+  cloneRequest->d->port            = d->port;
+  cloneRequest->d->verb            = d->verb;
   cloneRequest->d->endpoint        = d->endpoint;
-  cloneRequest->d->resolverResults = d->resolverResults;
   cloneRequest->d->headerData      = d->headerData;
+  cloneRequest->d->formPostData    = d->formPostData;
+  cloneRequest->d->formGetData     = d->formGetData;
+  cloneRequest->d->resolverResults = d->resolverResults;
   return cloneRequest;
 }
 
@@ -116,12 +133,40 @@ Request* Request::makeClone() const
 Request* Request::makeDeadClone() const
 {
   Request* cloneRequest = new Request({}, [](const Request&){});
-  cloneRequest->d->verb            = d->verb;
   cloneRequest->d->protocol        = d->protocol;
   cloneRequest->d->host            = d->host;
+  cloneRequest->d->port            = d->port;
+  cloneRequest->d->verb            = d->verb;
   cloneRequest->d->endpoint        = d->endpoint;
-  cloneRequest->d->resolverResults = d->resolverResults;
   cloneRequest->d->headerData      = d->headerData;
+  cloneRequest->d->formPostData    = d->formPostData;
+  cloneRequest->d->formGetData     = d->formGetData;
+  cloneRequest->d->resolverResults = d->resolverResults;
+  return cloneRequest;
+}
+
+//##################################################################################################
+Request* Request::makeRetryClone()
+{
+  Request* cloneRequest = new Request(d->alive, d->progressCallback, d->completionHandler);
+  cloneRequest->d->shouldRetry     = d->shouldRetry;
+  cloneRequest->d->protocol        = d->protocol;
+  cloneRequest->d->host            = d->host;
+  cloneRequest->d->port            = d->port;
+  cloneRequest->d->verb            = d->verb;
+  cloneRequest->d->endpoint        = d->endpoint;
+  cloneRequest->d->headerData      = d->headerData;
+  cloneRequest->d->formPostData    = d->formPostData;
+  cloneRequest->d->formGetData     = d->formGetData;
+  cloneRequest->d->rawBodyData     = d->rawBodyData;
+  cloneRequest->d->contentType     = d->contentType;
+  cloneRequest->d->bodyEncodeMode  = d->bodyEncodeMode;
+
+  cloneRequest->d->addedToClient  = d->addedToClient;
+
+  d->progressCallback = [](float, size_t, size_t){};
+  d->completionHandler = [](const Request&){};
+
   return cloneRequest;
 }
 
@@ -327,38 +372,36 @@ void Request::generateRequest()
 std::string Request::toString() const
 {
   std::stringstream ss;
-#ifndef ALEX_BLINOV_DEBUG
   ss<<"\n--------------------------------- Request ---------------------------------"<<
-  "\n    Protocol: "<< (protocol() == tp_http::Protocol::HTTP ? "HTTP" : "HTTPS")<<
+  "\n    Protocol: " << (protocol() == tp_http::Protocol::HTTP ? "HTTP" : "HTTPS")<<
   "\n    Verb: "<< verb()<<
-  "\n    Host: "<<host()<<
+  "\n    Host: "<< host()<<
   "\n    Endpoint: "<<endpoint()<<
   "\n    Port: "<< port();
 
   if(headerData().size())
     ss<<"\n    -- Header data:";
   for(auto &data : headerData())
-    ss<<"\n        '"<<data.first<<"':'"<<data.second<<"'";
+    ss<<"\n        '"<<data.first<<"':'"<< tp_utils::binaryDebug(data.second, 10_KiB, 128) <<"'";
 
   if(formGetData().size())
     ss<<"\n    -- Get query parameters:";
   for(auto &data : formGetData())
-    ss<<"\n        '"<<data.first<<"':'"<<data.second<<"'";
+    ss<<"\n        '"<<data.first<<"':'"<< tp_utils::binaryDebug(data.second, 10_KiB, 128) <<"'";
   
   if(formPostData().size())
     ss<<"\n    -- Post query parameters:";
   for(auto &data : formPostData())
-    ss<<"\n        '"<<data.first<<"':'"<<data.second.data<<"'";
+    ss<<"\n        '"<<data.first<<"':'"<< tp_utils::binaryDebug(data.second.data, 10_KiB, 128) <<"'";
 
   ss<<"\n    -- Request values:";
   for(const auto& i : d->request)
-    ss <<  "\n        '" << i.name_string()<<"':'"<<i.value();
+    ss <<  "\n        '" << i.name_string()<<"':'"<< tp_utils::binaryDebug(std::string(i.value()), 10_KiB, 128);
 
   ss<<
   "\n    ContentType: "<<contentType()<<
-  "\n    Body: "<<rawBodyData()<<
+  "\n    Body: "<< tp_utils::binaryDebug(rawBodyData(), 10_KiB, 128) <<
   "\n---------------------------------------------------------------------------\n";
-#endif
   return ss.str();
 }
 
@@ -397,12 +440,16 @@ boost::beast::http::response_parser<boost::beast::http::string_body>& Request::m
 }
 
 //##################################################################################################
-void Request::fail(const boost::system::error_code& ec, const std::string& whatFailed)
+void Request::fail(const boost::system::error_code& ec, FailedReason failedReason, const std::string& whatFailed)
 {
+  if(d->failedReason != FailedReason::None)
+    return;
+
+  d->failedReason = failedReason;
   d->whatFailed = whatFailed + " ec: " + ec.message() + " code: " + std::to_string(ec.value());
 
 #ifdef TP_HTTP_DEBUG
-  // WARNING: If you get a crash here it may be bost headers not mathing the compiled boost_system
+  // WARNING: If you get a crash here it may be boost headers not mathing the compiled boost_system
   // make sure you don't have multiple versions of Boost installed.
   tpWarning() << "Request::fail " << whatFailed << " ec: " << ec.message();
 
@@ -411,8 +458,12 @@ void Request::fail(const boost::system::error_code& ec, const std::string& whatF
 }
 
 //##################################################################################################
-void Request::fail(const std::string& whatFailed)
+void Request::fail(FailedReason failedReason, const std::string& whatFailed)
 {
+  if(d->failedReason != FailedReason::None)
+    return;
+
+  d->failedReason = failedReason;
   d->whatFailed = whatFailed;
 }
 
@@ -444,6 +495,12 @@ bool Request::addedToClient() const
 const std::string& Request::whatFailed() const
 {
   return d->whatFailed;
+}
+
+//##################################################################################################
+FailedReason Request::failedReason() const
+{
+  return d->failedReason;
 }
 
 //##################################################################################################
